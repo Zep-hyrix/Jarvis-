@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#02040a">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<title>JARVIS</title>
+<style>
+:root{--bg:#02040a;--fg:#cfe8ff;--ac:#3fb6ff;--mut:#6b86a3;--ln:#12233a;--pn:#06101e}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,sans-serif}
+body{display:flex;flex-direction:column;overflow:hidden}
+button{background:#0a2540;color:var(--fg);border:1px solid var(--ac);border-radius:10px;padding:0 14px;font-size:16px;min-height:44px}
+input{background:var(--pn);color:var(--fg);border:1px solid #1d3a5c;border-radius:10px;padding:12px;font-size:16px;min-width:0}
+#top{display:flex;align-items:center;gap:12px;padding:8px 10px}
+#top b{letter-spacing:3px;font-weight:600;color:var(--ac)}
+#burger{width:44px;padding:0;font-size:22px}
+canvas{width:100%;height:34vh;display:block;flex:none}
+#log{flex:1;overflow-y:auto;padding:8px 14px;font-size:16px;line-height:1.45}
+.u{color:var(--mut);margin:8px 0}.a{margin:8px 0}.e{margin:8px 0;color:#ff8a8a}
+.u img,.a img{display:block;max-width:100%;max-height:40vh;border-radius:10px;margin-top:6px}
+#pv{display:none;padding:6px 10px;border-top:1px solid var(--ln)}
+#pv img{height:56px;border-radius:8px;vertical-align:middle;margin-right:8px}
+#bar{display:flex;gap:8px;padding:10px;border-top:1px solid var(--ln)}
+#t{flex:1}
+#mic.on{background:var(--ac);color:#02040a}
+#stop{display:none}
+#ov{position:fixed;inset:0;background:#0009;display:none;z-index:5}
+#dr{position:fixed;top:0;bottom:0;left:0;width:min(86vw,320px);background:#040b16;border-right:1px solid var(--ln);transform:translateX(-100%);transition:transform .2s;z-index:6;display:flex;flex-direction:column;padding:10px;gap:8px}
+#dr.open{transform:none}
+#list{flex:1;overflow-y:auto;min-height:60px}
+.ci{display:flex;align-items:center;gap:6px;padding:2px 6px;border-radius:8px}
+.ci.on{background:#0a2540}
+.ci span{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:10px 0}
+.ci button{min-height:32px;padding:0 10px;border-color:#1d3a5c}
+.sec{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--ln);padding-top:8px}
+.sec label{font-size:13px;color:var(--mut)}
+#cl{height:44px;padding:4px}
+#dv{display:none}
+.sec.sw{flex-direction:row;align-items:center;justify-content:space-between;font-size:15px}
+.sw input{width:24px;height:24px}
+#toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#0a2540;border:1px solid var(--ac);border-radius:10px;padding:10px 14px;display:none;z-index:9;max-width:88vw;text-align:center}
+</style>
+</head>
+<body>
+<div id="top"><button id="burger" aria-label="Menü">☰</button><b id="nm">JARVIS</b></div>
+<canvas id="c"></canvas>
+<div id="log"></div>
+<div id="pv"><img id="pi" alt=""><button id="px" aria-label="Görseli kaldır">×</button></div>
+<div id="bar">
+  <button id="clip" aria-label="Görsel ekle">📎</button>
+  <input id="t" placeholder="Yaz ya da mikrofona bas…" autocomplete="off">
+  <button id="mic" aria-label="Mikrofon">🎤</button>
+  <button id="stop" aria-label="Konuşmayı durdur">⏹</button>
+  <button id="send" aria-label="Gönder">➤</button>
+</div>
+<input type="file" id="f" accept="image/*" hidden>
+<div id="ov"></div>
+<aside id="dr">
+  <button id="nw">＋ Yeni sohbet</button>
+  <div id="list"></div>
+  <div class="sec">
+    <label>Yapay zekanın adı</label><input id="an">
+    <label>Çekirdek rengi</label><input id="cl" type="color">
+    <label>API anahtarı</label><input id="key" type="password" placeholder="Gemini API anahtarı">
+  </div>
+  <div class="sec" id="dv">
+    <label>Sohbet modeli</label><input id="model">
+    <label>Görsel modeli</label><input id="im">
+  </div>
+  <div class="sec sw"><span>Geliştirici modu</span><input type="checkbox" id="dev"></div>
+</aside>
+<div id="toast"></div>
+<script>
+const $=id=>document.getElementById(id);
+const API="https://generativelanguage.googleapis.com/v1beta/models/";
+const D={key:"",model:"gemini-3.5-flash-lite",im:"gemini-2.5-flash-image",name:"JARVIS",color:"#3fb6ff",dev:false};
+let S={...D};
+try{
+  const raw=localStorage.getItem("js");
+  S={...D,...JSON.parse(raw||"{}")};
+  if(!S.key)S.key=localStorage.getItem("gk")||"";
+  const om=localStorage.getItem("gm");if(om&&!raw)S.model=om;
+}catch(e){}
+const keep=()=>{try{localStorage.setItem("js",JSON.stringify(S))}catch(e){}};
+let tt;function toast(m){const e=$("toast");e.textContent=m;e.style.display="block";clearTimeout(tt);tt=setTimeout(()=>e.style.display="none",3500)}
+
+/* ---------- çekirdek ---------- */
+const cv=$("c"),ctx=cv.getContext("2d");
+let state="idle",ph=0,RGB=[63,182,255],LT=[159,218,255];
+function fit(){cv.width=cv.clientWidth*devicePixelRatio;cv.height=cv.clientHeight*devicePixelRatio}
+addEventListener("resize",fit);
+function applyColor(){
+  document.documentElement.style.setProperty("--ac",S.color);
+  const h=S.color.replace("#","");RGB=[0,2,4].map(i=>parseInt(h.substr(i,2),16));
+  LT=RGB.map(v=>Math.round(v+(255-v)*.5));
+}
+const pts=Array.from({length:140},()=>({a:Math.random()*6.28,b:Math.random()*6.28,s:.2+Math.random()*.8}));
+function draw(){
+  const w=cv.width,h=cv.height,cx=w/2,cy=h/2,R=Math.min(w,h)*.32,dp=devicePixelRatio;
+  ctx.clearRect(0,0,w,h);ph+=state==="idle"?.01:state==="think"?.05:.03;
+  const pulse=state==="speak"?1+.06*Math.sin(ph*8):state==="listen"?1+.04*Math.sin(ph*5):1;
+  const g=ctx.createRadialGradient(cx,cy,R*.2,cx,cy,R*1.5*pulse);
+  g.addColorStop(0,`rgba(${RGB},.35)`);g.addColorStop(1,`rgba(${RGB},0)`);
+  ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
+  ctx.strokeStyle=`rgba(${LT},.8)`;ctx.lineWidth=2*dp;
+  ctx.beginPath();ctx.arc(cx,cy,R*pulse,0,6.28);ctx.stroke();
+  for(let i=0;i<3;i++){
+    ctx.strokeStyle=`rgba(${LT},${.5-i*.12})`;
+    ctx.beginPath();ctx.ellipse(cx,cy,R*pulse,R*pulse*(.35+.2*i),ph*(1+i*.4)+i,0,6.28);ctx.stroke();
+  }
+  ctx.fillStyle=`rgba(${LT},.8)`;
+  pts.forEach(p=>{
+    const x=cx+Math.cos(p.a+ph*p.s)*R*pulse*Math.sin(p.b),y=cy+Math.sin(p.a+ph*p.s)*R*pulse*Math.sin(p.b)*.9;
+    ctx.fillRect(x,y,2*dp,2*dp);
+  });
+  requestAnimationFrame(draw);
+}
+function setS(v){state=v;$("stop").style.display=v==="speak"?"block":"none"}
+
+/* ---------- kayıt (IndexedDB) ---------- */
+const db=new Promise((res,rej)=>{const r=indexedDB.open("jarvis",1);r.onupgradeneeded=()=>r.result.createObjectStore("c",{keyPath:"id"});r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+db.catch(()=>{});
+const tx=async(m,f)=>{const d=await db;return new Promise((res,rej)=>{const t=d.transaction("c",m),q=f(t.objectStore("c"));t.oncomplete=()=>res(q&&q.result);t.onerror=()=>rej(t.error)})};
+const putC=c=>tx("readwrite",s=>s.put(c)),delC=id=>tx("readwrite",s=>s.delete(id)),allC=()=>tx("readonly",s=>s.getAll());
+
+/* ---------- sohbet listesi ---------- */
+const log=$("log");
+let cur,chats=[],pend=null;
+function render1(m){
+  const d=document.createElement("div");d.className=m.r;if(m.t)d.append(m.t);
+  [m.i,m.g].forEach(s=>{if(s){const i=new Image();i.src=s;d.append(i)}});
+  log.append(d);log.scrollTop=log.scrollHeight;return d;
+}
+const openMenu=()=>{$("dr").classList.add("open");$("ov").style.display="block"};
+const closeMenu=()=>{$("dr").classList.remove("open");$("ov").style.display="none"};
+$("burger").onclick=openMenu;$("ov").onclick=closeMenu;
+function hello(){
+  if(!S.key){render1({r:"a",t:"Merhaba. Menüden API anahtarını gir, sonra konuşabiliriz."});openMenu()}
+  else render1({r:"a",t:"Hazırım. Yazabilir, konuşabilir, fotoğraf gönderebilir ya da “görsel oluştur: …” diyebilirsin."});
+}
+function newChat(){cur={id:Date.now(),title:"",ts:Date.now(),msgs:[]};log.innerHTML="";closeMenu();hello();refreshList()}
+function openChat(c){cur=c;log.innerHTML="";c.msgs.forEach(render1);closeMenu();refreshList()}
+async function save(){
+  if(!cur.msgs.length)return;cur.ts=Date.now();
+  try{await putC(cur)}catch(e){toast("Sohbet kaydedilemedi.")}
+  refreshList();
+}
+async function refreshList(){
+  try{chats=(await allC()).sort((a,b)=>b.ts-a.ts)}catch(e){chats=[]}
+  const l=$("list");l.innerHTML="";
+  chats.forEach(c=>{
+    const r=document.createElement("div");r.className="ci"+(cur&&c.id===cur.id?" on":"");
+    const t=document.createElement("span");t.textContent=c.title||"Sohbet";t.onclick=()=>openChat(c);
+    const x=document.createElement("button");x.textContent="×";x.setAttribute("aria-label","Sohbeti sil");
+    x.onclick=async()=>{if(confirm("Bu sohbet silinsin mi?")){try{await delC(c.id)}catch(e){}if(cur.id===c.id)newChat();else refreshList()}};
+    r.append(t,x);l.append(r);
+  });
+}
+$("nw").onclick=newChat;
+
+/* ---------- ayarlar ---------- */
+function applyUI(){
+  document.title=S.name;$("nm").textContent=S.name;$("an").value=S.name;$("cl").value=S.color;
+  $("key").value=S.key;$("model").value=S.model;$("im").value=S.im;$("dev").checked=S.dev;
+  $("dv").style.display=S.dev?"flex":"none";$("key").readOnly=!(S.dev||!S.key);applyColor();
+}
+$("an").oninput=e=>{S.name=e.target.value.trim()||"JARVIS";keep();$("nm").textContent=S.name;document.title=S.name};
+$("cl").oninput=e=>{S.color=e.target.value;keep();applyColor()};
+$("key").onclick=()=>{if($("key").readOnly)toast("API anahtarını değiştirmek için menünün en altından Geliştirici modunu aç.")};
+$("key").onchange=e=>{if(!e.target.readOnly){S.key=e.target.value.trim();keep();applyUI()}};
+$("model").onchange=e=>{S.model=e.target.value.trim()||D.model;keep()};
+$("im").onchange=e=>{S.im=e.target.value.trim()||D.im;keep()};
+$("dev").onchange=e=>{S.dev=e.target.checked;keep();applyUI()};
+
+/* ---------- görsel ekleme ---------- */
+function shrink(file){return new Promise((res,rej)=>{
+  const im=new Image(),u=URL.createObjectURL(file);
+  im.onload=()=>{const k=Math.min(1,1024/Math.max(im.width,im.height)),c=document.createElement("canvas");
+    c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);
+    c.getContext("2d").drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);res(c.toDataURL("image/jpeg",.8))};
+  im.onerror=()=>rej(new Error("açılamadı"));im.src=u;
+})}
+function showPend(){$("pi").src=pend||"";$("pv").style.display=pend?"block":"none"}
+$("clip").onclick=()=>$("f").click();
+$("f").onchange=async e=>{const f=e.target.files[0];e.target.value="";if(!f)return;
+  try{pend=await shrink(f);showPend()}catch(x){toast("Görsel açılamadı.")}};
+$("px").onclick=()=>{pend=null;showPend()};
+
+/* ---------- Gemini ---------- */
+function errMsg(s,m){
+  const l=m.toLowerCase();
+  if(l.includes("billed")||l.includes("billing"))return "Bu model ücretsiz kullanılamıyor, faturalandırma gerekiyor.";
+  if(l.includes("api key"))return "API anahtarı geçersiz. Menüden geliştirici modunu açıp düzelt.";
+  if(s===429)return "Kota doldu ya da çok hızlı istek gönderdin. Biraz bekleyip tekrar dene.";
+  if(s===401||s===403)return "API anahtarı reddedildi ya da bu modele erişimin yok.";
+  if(s===404)return "Model bulunamadı. Geliştirici modunda model adını kontrol et.";
+  if(s>=500)return "Google sunucusunda geçici bir sorun var. Tekrar dene.";
+  return "Hata ("+s+"): "+m;
+}
+async function gem(model,body){
+  let r;
+  try{r=await fetch(API+model+":generateContent?key="+encodeURIComponent(S.key),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})}
+  catch(e){throw new Error("İnternet bağlantısı yok ya da istek ulaşmadı.")}
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(errMsg(r.status,j.error&&j.error.message||""));
+  return j;
+}
+function parts(j){
+  const c=j.candidates&&j.candidates[0];
+  if(!c||!c.content||!c.content.parts)throw new Error("Cevap engellendi ya da boş geldi. Farklı şekilde dene.");
+  return c.content.parts;
+}
+const b64=d=>d.split(",")[1];
+async function chat(){
+  let h=cur.msgs.slice(-12);while(h[0]&&h[0].r==="a")h.shift();
+  const n=h.length;
+  const contents=h.map((m,k)=>{
+    const p=[];if(m.t)p.push({text:m.t});
+    if(m.i&&k>=n-6)p.push({inlineData:{mimeType:"image/jpeg",data:b64(m.i)}});
+    if(!p.length)p.push({text:"[görsel]"});
+    return{role:m.r==="u"?"user":"model",parts:p};
+  });
+  const SYS=`Sen ${S.name} adında, Türkçe konuşan, kısa ve net cevap veren kişisel bir asistansın. Cevapların sesli okunacağı için biçimlendirme, madde işareti ve emoji kullanma.`;
+  const j=await gem(S.model,{systemInstruction:{parts:[{text:SYS}]},contents});
+  const t=parts(j).map(p=>p.text||"").join("").trim()||"Boş cevap geldi.";
+  const a={r:"a",t};cur.msgs.push(a);render1(a);speak(t);
+}
+async function makeImg(q,img){
+  const p=[{text:q}];if(img)p.push({inlineData:{mimeType:"image/jpeg",data:b64(img)}});
+  const j=await gem(S.im,{contents:[{role:"user",parts:p}],generationConfig:{responseModalities:["IMAGE","TEXT"]}});
+  const ps=parts(j),f=ps.find(x=>x.inlineData),t=ps.map(x=>x.text||"").join("").trim();
+  if(!f)throw new Error(t||"Model görsel döndürmedi.");
+  const a={r:"a",t,g:"data:"+f.inlineData.mimeType+";base64,"+f.inlineData.data};
+  cur.msgs.push(a);render1(a);speak(t||"Görsel hazır.");
+}
+const GEN=/^\s*(görsel|resim)\s*(oluştur|çiz|yap)\b[:,\s-]*|^\s*çiz[:,\s-]+/i;
+async function ask(q){
+  if(!S.key){toast("Önce menüden API anahtarını gir.");openMenu();return}
+  speechSynthesis.cancel();
+  const img=pend;pend=null;showPend();
+  const m={r:"u",t:q,i:img};cur.msgs.push(m);render1(m);
+  if(!cur.title)cur.title=q.slice(0,30);
+  setS("think");
+  try{
+    if(GEN.test(q))await makeImg(q.replace(GEN,"").trim()||q,img);else await chat();
+    save();
+  }catch(e){
+    setS("idle");cur.msgs.pop();if(!cur.msgs.length)cur.title="";
+    render1({r:"e",t:e.message});$("t").value=q;pend=img;showPend();
+  }
+}
+
+/* ---------- ses ---------- */
+function speak(t){
+  setS("idle");
+  if(!("speechSynthesis" in window))return;
+  speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="tr-TR";
+  u.onstart=()=>setS("speak");u.onend=u.onerror=()=>setS("idle");speechSynthesis.speak(u);
+}
+$("stop").onclick=()=>{speechSynthesis.cancel();setS("idle")};
+function send(){const v=$("t").value.trim();if(!v&&!pend)return;$("t").value="";ask(v||"Bu görseli anlat.")}
+$("send").onclick=send;$("t").onkeydown=e=>{if(e.key==="Enter")send()};
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let rec=null;
+$("mic").onclick=()=>{
+  if(!SR){render1({r:"e",t:"Bu tarayıcıda ses tanıma yok. Klavyedeki 🎤 ile konuşup yazıya çevirebilirsin."});$("t").focus();return}
+  if(rec){rec.stop();return}
+  rec=new SR();rec.lang="tr-TR";rec.interimResults=false;
+  rec.onstart=()=>{setS("listen");$("mic").classList.add("on")};
+  rec.onresult=e=>{ask(e.results[0][0].transcript)};
+  rec.onerror=e=>render1({r:"e",t:"Mikrofon hatası: "+e.error});
+  rec.onend=()=>{rec=null;$("mic").classList.remove("on");if(state==="listen")setS("idle")};
+  rec.start();
+};
+
+/* ---------- başlat ---------- */
+applyUI();fit();draw();
+(async()=>{await refreshList();chats.length?openChat(chats[0]):newChat()})();
+if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+</body>
+</html>
