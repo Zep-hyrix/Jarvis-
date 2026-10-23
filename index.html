@@ -228,7 +228,7 @@ async function chat(){
 }
 async function ask(q){
   if(!S.key){toast("Önce menüden API anahtarını gir.");$("t").value=q;openMenu();return}
-  speechSynthesis.cancel();
+  stopTTS();
   const img=pend;pend=null;showPend();
   const m={r:"u",t:q,i:img};cur.msgs.push(m);render1(m);
   if(!cur.title)cur.title=q.slice(0,30);
@@ -243,13 +243,14 @@ async function ask(q){
 }
 
 /* ---------- ses ---------- */
+function stopTTS(){try{speechSynthesis.cancel()}catch(e){}}
 function speak(t){
   setS("idle");
   if(!("speechSynthesis" in window))return;
   speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="tr-TR";
   u.onstart=()=>setS("speak");u.onend=u.onerror=()=>setS("idle");speechSynthesis.speak(u);
 }
-$("stop").onclick=()=>{speechSynthesis.cancel();setS("idle")};
+$("stop").onclick=()=>{stopTTS();setS("idle")};
 function send(){const v=$("t").value.trim();if(!v&&!pend)return;const q=v||"Bu görseli anlat.";$("t").value="";ask(q).catch(e=>{render1({r:"e",t:"Hata: "+e.message});$("t").value=q})}
 $("send").onclick=send;$("t").onkeydown=e=>{if(e.key==="Enter")send()};
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
