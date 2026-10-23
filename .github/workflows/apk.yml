@@ -23,10 +23,88 @@ jobs:
           npx cap add android
           npx cap sync android
           M=android/app/src/main/AndroidManifest.xml
-          sed -i 's#<uses-permission android:name="android.permission.INTERNET" />#&<uses-permission android:name="android.permission.RECORD_AUDIO" /><uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />#' $M
-          sed -i 's#</manifest>#<queries><intent><action android:name="android.intent.action.TTS_SERVICE" /></intent></queries></manifest>#' $M
+          sed -i 's#<uses-permission android:name="android.permission.INTERNET" />#&<uses-permission android:name="android.permission.RECORD_AUDIO" /><uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" /><uses-permission android:name="com.android.alarm.permission.SET_ALARM" />#' $M
+          sed -i 's#</manifest>#<queries><intent><action android:name="android.intent.action.TTS_SERVICE" /></intent><intent><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent></queries></manifest>#' $M
           grep RECORD_AUDIO $M
+          grep SET_ALARM $M
           grep TTS_SERVICE $M
+          D=android/app/src/main/java/com/zephyrix/jarvis
+          cat > $D/JarvisPlugin.java <<'EOF'
+          package com.zephyrix.jarvis;
+          import android.content.Intent;
+          import android.content.pm.PackageManager;
+          import android.content.pm.ResolveInfo;
+          import android.provider.AlarmClock;
+          import com.getcapacitor.JSObject;
+          import com.getcapacitor.Plugin;
+          import com.getcapacitor.PluginCall;
+          import com.getcapacitor.PluginMethod;
+          import com.getcapacitor.annotation.CapacitorPlugin;
+          import java.util.Locale;
+          @CapacitorPlugin(name = "Jarvis")
+          public class JarvisPlugin extends Plugin {
+            @PluginMethod
+            public void setAlarm(PluginCall call) {
+              int h = call.getInt("hour", 0);
+              int m = call.getInt("minute", 0);
+              Intent i = new Intent(AlarmClock.ACTION_SET_ALARM);
+              i.putExtra(AlarmClock.EXTRA_HOUR, h);
+              i.putExtra(AlarmClock.EXTRA_MINUTES, m);
+              i.putExtra(AlarmClock.EXTRA_MESSAGE, call.getString("label", "JARVIS"));
+              i.putExtra(AlarmClock.EXTRA_SKIP_UI, true);
+              i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+              try { getContext().startActivity(i); call.resolve(); }
+              catch (Exception e) { call.reject(String.valueOf(e.getMessage())); }
+            }
+            @PluginMethod
+            public void setTimer(PluginCall call) {
+              int s = call.getInt("seconds", 60);
+              Intent i = new Intent(AlarmClock.ACTION_SET_TIMER);
+              i.putExtra(AlarmClock.EXTRA_LENGTH, s);
+              i.putExtra(AlarmClock.EXTRA_MESSAGE, call.getString("label", "JARVIS"));
+              i.putExtra(AlarmClock.EXTRA_SKIP_UI, true);
+              i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+              try { getContext().startActivity(i); call.resolve(); }
+              catch (Exception e) { call.reject(String.valueOf(e.getMessage())); }
+            }
+            @PluginMethod
+            public void openApp(PluginCall call) {
+              String q = call.getString("name", "").toLowerCase(Locale.ROOT).trim();
+              if (q.isEmpty()) { call.reject("Uygulama adı boş"); return; }
+              PackageManager pm = getContext().getPackageManager();
+              Intent main = new Intent(Intent.ACTION_MAIN);
+              main.addCategory(Intent.CATEGORY_LAUNCHER);
+              ResolveInfo best = null;
+              for (ResolveInfo r : pm.queryIntentActivities(main, 0)) {
+                String l = r.loadLabel(pm).toString().toLowerCase(Locale.ROOT);
+                if (l.equals(q)) { best = r; break; }
+                if (best == null && l.length() > 1 && (l.contains(q) || q.contains(l))) best = r;
+              }
+              if (best == null) { call.reject("Uygulama bulunamadı"); return; }
+              Intent i = pm.getLaunchIntentForPackage(best.activityInfo.packageName);
+              if (i == null) { call.reject("Uygulama açılamadı"); return; }
+              i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+              try {
+                getContext().startActivity(i);
+                JSObject o = new JSObject();
+                o.put("app", best.loadLabel(pm).toString());
+                call.resolve(o);
+              } catch (Exception e) { call.reject(String.valueOf(e.getMessage())); }
+            }
+          }
+          EOF
+          cat > $D/MainActivity.java <<'EOF'
+          package com.zephyrix.jarvis;
+          import android.os.Bundle;
+          import com.getcapacitor.BridgeActivity;
+          public class MainActivity extends BridgeActivity {
+            @Override
+            public void onCreate(Bundle b) {
+              registerPlugin(JarvisPlugin.class);
+              super.onCreate(b);
+            }
+          }
+          EOF
       - name: APK derle
         run: |
           cd app/android
