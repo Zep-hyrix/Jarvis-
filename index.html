@@ -218,10 +218,17 @@ function parts(j){
   return c.content.parts;
 }
 const b64=d=>d.split(",")[1];
-const TOOLS=[{functionDeclarations:[
+const BASE=[
   {name:"zaman_tarih",description:"Cihazın şu anki yerel tarih ve saatini verir."},
   {name:"hava_durumu",description:"Bir şehir için güncel hava durumunu ve bugün ile yarının tahminini verir.",parameters:{type:"OBJECT",properties:{sehir:{type:"STRING",description:"Şehir adı"}},required:["sehir"]}}
-]}];
+]; 
+const JP=()=>window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.Jarvis;
+const PHONE=[
+  {name:"alarm_kur",description:"Telefonun saat uygulamasında alarm kurar. Saat 24 saatlik biçimde verilir.",parameters:{type:"OBJECT",properties:{saat:{type:"INTEGER",description:"0-23"},dakika:{type:"INTEGER",description:"0-59"},etiket:{type:"STRING",description:"Alarm adı"}},required:["saat","dakika"]}},
+  {name:"uygulama_ac",description:"Telefonda adı söylenen bir uygulamayı açar (ör. YouTube, WhatsApp, Kamera, Ayarlar).",parameters:{type:"OBJECT",properties:{ad:{type:"STRING",description:"Uygulamanın adı"}},required:["ad"]}},
+  {name:"zamanlayici_kur",description:"Geri sayım zamanlayıcısı kurar.",parameters:{type:"OBJECT",properties:{saniye:{type:"INTEGER",description:"Toplam süre, saniye cinsinden"},etiket:{type:"STRING",description:"Zamanlayıcı adı"}},required:["saniye"]}}
+];
+const toolList=()=>[{functionDeclarations:JP()?BASE.concat(PHONE):BASE}];
 async function runTool(n,a){
   if(n==="zaman_tarih"){const d=new Date();return{tarih_saat:d.toLocaleString("tr-TR",{dateStyle:"full",timeStyle:"short"}),saat_dilimi:Intl.DateTimeFormat().resolvedOptions().timeZone}}
   if(n==="hava_durumu"){
@@ -229,6 +236,15 @@ async function runTool(n,a){
     const c=g.results&&g.results[0];if(!c)return{hata:"Şehir bulunamadı"};
     const w=await(await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${c.latitude}&longitude=${c.longitude}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=2`)).json();
     return{sehir:c.name,ulke:c.country,simdi:w.current,gun_enyuksek:w.daily.temperature_2m_max,gun_endusuk:w.daily.temperature_2m_min,yagis_olasiligi:w.daily.precipitation_probability_max,not:"Dizilerde ilk değer bugün, ikinci yarın. weather_code WMO kodudur."};
+  }
+  if(n==="alarm_kur"||n==="zamanlayici_kur"||n==="uygulama_ac"){
+    const p=JP();if(!p)return{hata:"Bu özellik sadece uygulamada çalışır."};
+    try{
+      if(n==="uygulama_ac"){const r=await p.openApp({name:a.ad||""});return{sonuc:((r&&r.app)||a.ad)+" açıldı."}}
+      if(n==="alarm_kur")await p.setAlarm({hour:Math.round(a.saat),minute:Math.round(a.dakika||0),label:a.etiket||"JARVIS"});
+      else await p.setTimer({seconds:Math.round(a.saniye),label:a.etiket||"JARVIS"});
+      return{sonuc:"Kuruldu."};
+    }catch(e){return{hata:"Telefon komutu uygulanamadı: "+(e.message||e)}}
   }
   return{hata:"Bilinmeyen araç"};
 }
@@ -241,10 +257,10 @@ async function chat(){
     if(!p.length)p.push({text:"[görsel]"});
     return{role:m.r==="u"?"user":"model",parts:p};
   });
-  const SYS=`Sen ${S.name} adında, Türkçe konuşan, kısa ve net cevap veren kişisel bir asistansın. Cevapların sesli okunacağı için biçimlendirme, madde işareti ve emoji kullanma. Saat, tarih ve hava durumu sorularında araçları kullan.`;
+  const SYS=`Sen ${S.name} adında, Türkçe konuşan, kısa ve net cevap veren kişisel bir asistansın. Cevapların sesli okunacağı için biçimlendirme, madde işareti ve emoji kullanma. Saat, tarih, hava durumu, alarm, zamanlayıcı ve uygulama açma isteklerinde araçları kullan. Şu an: ${new Date().toLocaleString("tr-TR",{dateStyle:"full",timeStyle:"short"})}.`;
   let t="";
   for(let k=0;k<4;k++){
-    const j=await gem(S.model,{systemInstruction:{parts:[{text:SYS}]},tools:TOOLS,contents});
+    const j=await gem(S.model,{systemInstruction:{parts:[{text:SYS}]},tools:toolList(),contents});
     const ps=parts(j),calls=ps.filter(p=>p.functionCall);
     if(!calls.length){t=ps.map(p=>p.text||"").join("").trim();break}
     contents.push({role:"model",parts:ps});
