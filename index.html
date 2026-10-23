@@ -21,6 +21,7 @@ canvas{width:100%;height:34vh;display:block;flex:none}
 #log{flex:1;overflow-y:auto;padding:8px 14px;font-size:16px;line-height:1.45}
 .u{color:var(--mut);margin:8px 0}.a{margin:8px 0}.e{margin:8px 0;color:#ff8a8a}
 .u img,.a img{display:block;max-width:100%;max-height:40vh;border-radius:10px;margin-top:6px}
+.sp{min-height:32px;padding:0 8px;margin-left:8px;border-color:#1d3a5c;vertical-align:middle}
 #pv{display:none;padding:6px 10px;border-top:1px solid var(--ln)}
 #pv img{height:56px;border-radius:8px;vertical-align:middle;margin-right:8px}
 #bar{display:flex;gap:8px;padding:10px;border-top:1px solid var(--ln)}
@@ -66,8 +67,10 @@ canvas{width:100%;height:34vh;display:block;flex:none}
     <label>Çekirdek rengi</label><input id="cl" type="color">
     <label>API anahtarı</label><input id="key" type="password" placeholder="Gemini API anahtarı">
   </div>
+  <div class="sec sw"><span>Cevapları otomatik oku</span><input type="checkbox" id="au"></div>
   <div class="sec" id="dv">
     <label>Sohbet modeli</label><input id="model">
+    <label>Ses modeli</label><input id="tts">
   </div>
   <div class="sec sw"><span>Geliştirici modu</span><input type="checkbox" id="dev"></div>
 </aside>
@@ -75,7 +78,7 @@ canvas{width:100%;height:34vh;display:block;flex:none}
 <script>
 const $=id=>document.getElementById(id);
 const API="https://generativelanguage.googleapis.com/v1beta/models/";
-const D={key:"",model:"gemini-3.5-flash-lite",name:"JARVIS",color:"#3fb6ff",dev:false};
+const D={key:"",model:"gemini-3.5-flash-lite",tts:"gemini-3.1-flash-tts-preview",auto:true,name:"JARVIS",color:"#3fb6ff",dev:false};
 let S={...D};
 try{
   const raw=localStorage.getItem("js");
@@ -130,6 +133,7 @@ const log=$("log");
 let cur,chats=[],pend=null;
 function render1(m){
   const d=document.createElement("div");d.className=m.r;if(m.t)d.append(m.t);
+  if(m.r==="a"&&m.t&&m.sp!==false){const b=document.createElement("button");b.className="sp";b.textContent="🔊";b.setAttribute("aria-label","Sesli oku");b.onclick=()=>speak(m.t);d.append(b)}
   [m.i,m.g].forEach(s=>{if(s){const i=new Image();i.src=s;d.append(i)}});
   log.append(d);log.scrollTop=log.scrollHeight;return d;
 }
@@ -137,8 +141,8 @@ const openMenu=()=>{$("dr").classList.add("open");$("ov").style.display="block"}
 const closeMenu=()=>{$("dr").classList.remove("open");$("ov").style.display="none"};
 $("burger").onclick=openMenu;$("ov").onclick=closeMenu;
 function hello(){
-  if(!S.key){render1({r:"a",t:"Merhaba. Menüden API anahtarını gir, sonra konuşabiliriz."});openMenu()}
-  else render1({r:"a",t:"Hazırım. Yazabilir, konuşabilir ya da fotoğraf gönderebilirsin."});
+  if(!S.key){render1({r:"a",sp:false,t:"Merhaba. Menüden API anahtarını gir, sonra konuşabiliriz."});openMenu()}
+  else render1({r:"a",sp:false,t:"Hazırım. Yazabilir, konuşabilir ya da fotoğraf gönderebilirsin."});
 }
 function newChat(){cur={id:Date.now(),title:"",ts:Date.now(),msgs:[]};log.innerHTML="";closeMenu();hello();refreshList()}
 function openChat(c){cur=c;log.innerHTML="";c.msgs.forEach(render1);closeMenu();refreshList()}
@@ -163,7 +167,7 @@ $("nw").onclick=newChat;
 /* ---------- ayarlar ---------- */
 function applyUI(){
   document.title=S.name;$("nm").textContent=S.name;$("an").value=S.name;$("cl").value=S.color;
-  $("key").value=S.key;$("model").value=S.model;$("dev").checked=S.dev;
+  $("key").value=S.key;$("model").value=S.model;$("tts").value=S.tts;$("dev").checked=S.dev;$("au").checked=S.auto;
   $("dv").style.display=S.dev?"flex":"none";$("key").readOnly=!(S.dev||!S.key);applyColor();
 }
 $("an").oninput=e=>{S.name=e.target.value.trim()||"JARVIS";keep();$("nm").textContent=S.name;document.title=S.name};
@@ -171,7 +175,9 @@ $("cl").oninput=e=>{S.color=e.target.value;keep();applyColor()};
 $("key").onclick=()=>{if($("key").readOnly)toast("API anahtarını değiştirmek için menünün en altından Geliştirici modunu aç.")};
 $("key").onchange=e=>{if(!e.target.readOnly){S.key=e.target.value.trim();keep();applyUI()}};
 $("model").onchange=e=>{S.model=e.target.value.trim()||D.model;keep()};
+$("tts").onchange=e=>{S.tts=e.target.value.trim()||D.tts;keep()};
 $("dev").onchange=e=>{S.dev=e.target.checked;keep();applyUI()};
+$("au").onchange=e=>{S.auto=e.target.checked;keep()};
 
 /* ---------- görsel ekleme ---------- */
 function shrink(file){return new Promise((res,rej)=>{
@@ -224,7 +230,7 @@ async function chat(){
   const SYS=`Sen ${S.name} adında, Türkçe konuşan, kısa ve net cevap veren kişisel bir asistansın. Cevapların sesli okunacağı için biçimlendirme, madde işareti ve emoji kullanma.`;
   const j=await gem(S.model,{systemInstruction:{parts:[{text:SYS}]},contents});
   const t=parts(j).map(p=>p.text||"").join("").trim()||"Boş cevap geldi.";
-  const a={r:"a",t};cur.msgs.push(a);render1(a);speak(t);
+  const a={r:"a",t};cur.msgs.push(a);render1(a);if(S.auto)speak(t);else setS("idle");
 }
 async function ask(q){
   if(!S.key){toast("Önce menüden API anahtarını gir.");$("t").value=q;openMenu();return}
@@ -244,22 +250,38 @@ async function ask(q){
 
 /* ---------- ses ---------- */
 const NT=()=>window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.TextToSpeech;
+let nativeBad=false,gsrc=null,spk=0;
 function stopTTS(){
+  spk++;
   try{speechSynthesis.cancel()}catch(e){}
+  try{if(gsrc)gsrc.stop()}catch(e){}
   try{const n=NT();if(n)n.stop().catch(()=>{})}catch(e){}
 }
+async function geminiSpeak(t){
+  const j=await gem(S.tts,{contents:[{role:"user",parts:[{text:t}]}],generationConfig:{responseModalities:["AUDIO"],speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:"Kore"}}}}});
+  const f=parts(j).find(x=>x.inlineData);if(!f)throw new Error("Ses gelmedi.");
+  const bin=atob(f.inlineData.data),n=bin.length>>1,fl=new Float32Array(n);
+  for(let i=0;i<n;i++){let v=bin.charCodeAt(2*i)|(bin.charCodeAt(2*i+1)<<8);if(v>=32768)v-=65536;fl[i]=v/32768}
+  const ac=new (window.AudioContext||window.webkitAudioContext)({sampleRate:24000});
+  if(ac.resume)await ac.resume();
+  const b=ac.createBuffer(1,n,24000);b.copyToChannel(fl,0);
+  const src=ac.createBufferSource();src.buffer=b;src.connect(ac.destination);gsrc=src;
+  await new Promise(r=>{src.onended=r;src.start()});
+  gsrc=null;ac.close();
+}
 async function speak(t){
-  setS("idle");
-  const n=NT();
-  if(n){
-    setS("speak");
-    try{await n.speak({text:t,lang:"tr-TR",rate:1,pitch:1,volume:1})}
-    catch(e){toast("Sesli okuma çalışmadı: "+(e.message||e))}
-    setS("idle");return;
+  stopTTS();setS("idle");const id=++spk,n=NT();
+  if(!n&&"speechSynthesis" in window){
+    speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="tr-TR";
+    u.onstart=()=>setS("speak");u.onend=u.onerror=()=>setS("idle");speechSynthesis.speak(u);return;
   }
-  if(!("speechSynthesis" in window))return;
-  speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="tr-TR";
-  u.onstart=()=>setS("speak");u.onend=u.onerror=()=>setS("idle");speechSynthesis.speak(u);
+  setS("speak");
+  if(n&&!nativeBad){
+    try{await n.speak({text:t,lang:"tr-TR",rate:1,pitch:1,volume:1});if(id===spk)setS("idle");return}
+    catch(e){nativeBad=true;if(id!==spk)return}
+  }
+  try{await geminiSpeak(t)}catch(e){if(id===spk)toast("Sesli okuma çalışmadı: "+(e.message||e))}
+  if(id===spk)setS("idle");
 }
 $("stop").onclick=()=>{stopTTS();setS("idle")};
 function send(){const v=$("t").value.trim();if(!v&&!pend)return;const q=v||"Bu görseli anlat.";$("t").value="";ask(q).catch(e=>{render1({r:"e",t:"Hata: "+e.message});$("t").value=q})}
