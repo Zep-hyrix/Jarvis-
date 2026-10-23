@@ -243,9 +243,20 @@ async function ask(q){
 }
 
 /* ---------- ses ---------- */
-function stopTTS(){try{speechSynthesis.cancel()}catch(e){}}
-function speak(t){
+const NT=()=>window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.TextToSpeech;
+function stopTTS(){
+  try{speechSynthesis.cancel()}catch(e){}
+  try{const n=NT();if(n)n.stop().catch(()=>{})}catch(e){}
+}
+async function speak(t){
   setS("idle");
+  const n=NT();
+  if(n){
+    setS("speak");
+    try{await n.speak({text:t,lang:"tr-TR",rate:1,pitch:1,volume:1})}
+    catch(e){toast("Sesli okuma çalışmadı: "+(e.message||e))}
+    setS("idle");return;
+  }
   if(!("speechSynthesis" in window))return;
   speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="tr-TR";
   u.onstart=()=>setS("speak");u.onend=u.onerror=()=>setS("idle");speechSynthesis.speak(u);
@@ -256,7 +267,7 @@ $("send").onclick=send;$("t").onkeydown=e=>{if(e.key==="Enter")send()};
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 let rec=null;
 $("mic").onclick=()=>{
-  if(!SR){render1({r:"e",t:"Bu tarayıcıda ses tanıma yok. Klavyedeki 🎤 ile konuşup yazıya çevirebilirsin."});$("t").focus();return}
+  if(!SR){recordAsk();return}
   if(rec){rec.stop();return}
   rec=new SR();rec.lang="tr-TR";rec.interimResults=false;
   rec.onstart=()=>{setS("listen");$("mic").classList.add("on")};
@@ -265,6 +276,48 @@ $("mic").onclick=()=>{
   rec.onend=()=>{rec=null;$("mic").classList.remove("on");if(state==="listen")setS("idle")};
   rec.start();
 };
+
+/* ---------- ses kaydı (uygulama içi mikrofon) ---------- */
+const b64blob=b=>new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result.split(",")[1]);f.readAsDataURL(b)});
+async function toWav(blob){
+  const ac=new (window.AudioContext||window.webkitAudioContext)();
+  const buf=await ac.decodeAudioData(await blob.arrayBuffer());if(ac.close)ac.close();
+  const sr=16000,n=Math.round(buf.duration*sr),d=buf.getChannelData(0),out=new Int16Array(n);
+  for(let i=0;i<n;i++){const v=d[Math.min(d.length-1,Math.floor(i*buf.sampleRate/sr))];out[i]=Math.max(-1,Math.min(1,v))*32767}
+  const h=new DataView(new ArrayBuffer(44)),w=(o,t)=>[...t].forEach((c,i)=>h.setUint8(o+i,c.charCodeAt(0)));
+  w(0,"RIFF");h.setUint32(4,36+n*2,true);w(8,"WAVEfmt ");h.setUint32(16,16,true);h.setUint16(20,1,true);h.setUint16(22,1,true);
+  h.setUint32(24,sr,true);h.setUint32(28,sr*2,true);h.setUint16(32,2,true);h.setUint16(34,16,true);w(36,"data");h.setUint32(40,n*2,true);
+  return new Blob([h,out],{type:"audio/wav"});
+}
+async function transcribe(blob){
+  const wav=await toWav(blob);
+  const j=await gem(S.model,{contents:[{role:"user",parts:[
+    {text:"Bu ses kaydını Türkçe olarak olduğu gibi yazıya dök. Sadece söylenen cümleyi yaz, başka hiçbir şey ekleme. Ses yoksa ya da anlaşılmıyorsa boş bırak."},
+    {inlineData:{mimeType:"audio/wav",data:await b64blob(wav)}}]}]});
+  return parts(j).map(p=>p.text||"").join("").trim();
+}
+let mr=null,chunks=[];
+async function recordAsk(){
+  if(mr){mr.stop();return}
+  if(!navigator.mediaDevices||!window.MediaRecorder){render1({r:"e",t:"Bu cihazda ses kaydı desteklenmiyor."});return}
+  if(!S.key){toast("Önce menüden API anahtarını gir.");openMenu();return}
+  let st;
+  try{st=await navigator.mediaDevices.getUserMedia({audio:true})}
+  catch(e){render1({r:"e",t:"Mikrofon izni alınamadı: "+(e.message||e.name)});return}
+  chunks=[];mr=new MediaRecorder(st);
+  mr.ondataavailable=e=>chunks.push(e.data);
+  mr.onstart=()=>{setS("listen");$("mic").classList.add("on");toast("Dinliyorum. Bitirince 🎤’ye tekrar bas.");
+    setTimeout(()=>{if(mr&&mr.state==="recording")mr.stop()},30000)};
+  mr.onstop=async()=>{
+    st.getTracks().forEach(t=>t.stop());$("mic").classList.remove("on");
+    const type=mr.mimeType||"audio/webm";mr=null;setS("think");
+    const blob=new Blob(chunks,{type});
+    if(blob.size<1000){setS("idle");toast("Ses alınamadı.");return}
+    try{const q=await transcribe(blob);setS("idle");if(q)await ask(q);else toast("Ne dediğini anlayamadım.")}
+    catch(e){setS("idle");render1({r:"e",t:"Ses yazıya çevrilemedi: "+e.message})}
+  };
+  mr.start();
+}
 
 /* ---------- başlat ---------- */
 applyUI();fit();draw();
