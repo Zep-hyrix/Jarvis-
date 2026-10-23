@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#02040a">
 <link rel="manifest" href="manifest.json">
-<link rel="icon" href="icon-192.png">
+<link rel="icon" href="ikon-192.png">
 <title>JARVIS</title>
 <style>
 :root{--bg:#02040a;--fg:#cfe8ff;--ac:#3fb6ff;--mut:#6b86a3;--ln:#12233a;--pn:#06101e}
@@ -68,7 +68,6 @@ canvas{width:100%;height:34vh;display:block;flex:none}
   </div>
   <div class="sec" id="dv">
     <label>Sohbet modeli</label><input id="model">
-    <label>Görsel modeli</label><input id="im">
   </div>
   <div class="sec sw"><span>Geliştirici modu</span><input type="checkbox" id="dev"></div>
 </aside>
@@ -76,7 +75,7 @@ canvas{width:100%;height:34vh;display:block;flex:none}
 <script>
 const $=id=>document.getElementById(id);
 const API="https://generativelanguage.googleapis.com/v1beta/models/";
-const D={key:"",model:"gemini-3.5-flash-lite",im:"gemini-2.5-flash-image",name:"JARVIS",color:"#3fb6ff",dev:false};
+const D={key:"",model:"gemini-3.5-flash-lite",name:"JARVIS",color:"#3fb6ff",dev:false};
 let S={...D};
 try{
   const raw=localStorage.getItem("js");
@@ -121,7 +120,7 @@ function draw(){
 function setS(v){state=v;$("stop").style.display=v==="speak"?"block":"none"}
 
 /* ---------- kayıt (IndexedDB) ---------- */
-const db=new Promise((res,rej)=>{const r=indexedDB.open("jarvis",1);r.onupgradeneeded=()=>r.result.createObjectStore("c",{keyPath:"id"});r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+const db=Promise.race([new Promise((res,rej)=>{const r=indexedDB.open("jarvis",1);r.onupgradeneeded=()=>r.result.createObjectStore("c",{keyPath:"id"});r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}),new Promise((_,rej)=>setTimeout(()=>rej(new Error("db")),3000))]);
 db.catch(()=>{});
 const tx=async(m,f)=>{const d=await db;return new Promise((res,rej)=>{const t=d.transaction("c",m),q=f(t.objectStore("c"));t.oncomplete=()=>res(q&&q.result);t.onerror=()=>rej(t.error)})};
 const putC=c=>tx("readwrite",s=>s.put(c)),delC=id=>tx("readwrite",s=>s.delete(id)),allC=()=>tx("readonly",s=>s.getAll());
@@ -139,7 +138,7 @@ const closeMenu=()=>{$("dr").classList.remove("open");$("ov").style.display="non
 $("burger").onclick=openMenu;$("ov").onclick=closeMenu;
 function hello(){
   if(!S.key){render1({r:"a",t:"Merhaba. Menüden API anahtarını gir, sonra konuşabiliriz."});openMenu()}
-  else render1({r:"a",t:"Hazırım. Yazabilir, konuşabilir, fotoğraf gönderebilir ya da “görsel oluştur: …” diyebilirsin."});
+  else render1({r:"a",t:"Hazırım. Yazabilir, konuşabilir ya da fotoğraf gönderebilirsin."});
 }
 function newChat(){cur={id:Date.now(),title:"",ts:Date.now(),msgs:[]};log.innerHTML="";closeMenu();hello();refreshList()}
 function openChat(c){cur=c;log.innerHTML="";c.msgs.forEach(render1);closeMenu();refreshList()}
@@ -164,7 +163,7 @@ $("nw").onclick=newChat;
 /* ---------- ayarlar ---------- */
 function applyUI(){
   document.title=S.name;$("nm").textContent=S.name;$("an").value=S.name;$("cl").value=S.color;
-  $("key").value=S.key;$("model").value=S.model;$("im").value=S.im;$("dev").checked=S.dev;
+  $("key").value=S.key;$("model").value=S.model;$("dev").checked=S.dev;
   $("dv").style.display=S.dev?"flex":"none";$("key").readOnly=!(S.dev||!S.key);applyColor();
 }
 $("an").oninput=e=>{S.name=e.target.value.trim()||"JARVIS";keep();$("nm").textContent=S.name;document.title=S.name};
@@ -172,7 +171,6 @@ $("cl").oninput=e=>{S.color=e.target.value;keep();applyColor()};
 $("key").onclick=()=>{if($("key").readOnly)toast("API anahtarını değiştirmek için menünün en altından Geliştirici modunu aç.")};
 $("key").onchange=e=>{if(!e.target.readOnly){S.key=e.target.value.trim();keep();applyUI()}};
 $("model").onchange=e=>{S.model=e.target.value.trim()||D.model;keep()};
-$("im").onchange=e=>{S.im=e.target.value.trim()||D.im;keep()};
 $("dev").onchange=e=>{S.dev=e.target.checked;keep();applyUI()};
 
 /* ---------- görsel ekleme ---------- */
@@ -228,24 +226,15 @@ async function chat(){
   const t=parts(j).map(p=>p.text||"").join("").trim()||"Boş cevap geldi.";
   const a={r:"a",t};cur.msgs.push(a);render1(a);speak(t);
 }
-async function makeImg(q,img){
-  const p=[{text:q}];if(img)p.push({inlineData:{mimeType:"image/jpeg",data:b64(img)}});
-  const j=await gem(S.im,{contents:[{role:"user",parts:p}],generationConfig:{responseModalities:["IMAGE","TEXT"]}});
-  const ps=parts(j),f=ps.find(x=>x.inlineData),t=ps.map(x=>x.text||"").join("").trim();
-  if(!f)throw new Error(t||"Model görsel döndürmedi.");
-  const a={r:"a",t,g:"data:"+f.inlineData.mimeType+";base64,"+f.inlineData.data};
-  cur.msgs.push(a);render1(a);speak(t||"Görsel hazır.");
-}
-const GEN=/^\s*(görsel|resim)\s*(oluştur|çiz|yap)\b[:,\s-]*|^\s*çiz[:,\s-]+/i;
 async function ask(q){
-  if(!S.key){toast("Önce menüden API anahtarını gir.");openMenu();return}
+  if(!S.key){toast("Önce menüden API anahtarını gir.");$("t").value=q;openMenu();return}
   speechSynthesis.cancel();
   const img=pend;pend=null;showPend();
   const m={r:"u",t:q,i:img};cur.msgs.push(m);render1(m);
   if(!cur.title)cur.title=q.slice(0,30);
   setS("think");
   try{
-    if(GEN.test(q))await makeImg(q.replace(GEN,"").trim()||q,img);else await chat();
+    await chat();
     save();
   }catch(e){
     setS("idle");cur.msgs.pop();if(!cur.msgs.length)cur.title="";
@@ -261,7 +250,7 @@ function speak(t){
   u.onstart=()=>setS("speak");u.onend=u.onerror=()=>setS("idle");speechSynthesis.speak(u);
 }
 $("stop").onclick=()=>{speechSynthesis.cancel();setS("idle")};
-function send(){const v=$("t").value.trim();if(!v&&!pend)return;$("t").value="";ask(v||"Bu görseli anlat.")}
+function send(){const v=$("t").value.trim();if(!v&&!pend)return;const q=v||"Bu görseli anlat.";$("t").value="";ask(q).catch(e=>{render1({r:"e",t:"Hata: "+e.message});$("t").value=q})}
 $("send").onclick=send;$("t").onkeydown=e=>{if(e.key==="Enter")send()};
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 let rec=null;
@@ -278,7 +267,8 @@ $("mic").onclick=()=>{
 
 /* ---------- başlat ---------- */
 applyUI();fit();draw();
-(async()=>{await refreshList();chats.length?openChat(chats[0]):newChat()})();
+newChat();
+(async()=>{await refreshList();if(chats.length&&!cur.msgs.length)openChat(chats[0])})();
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
 </body>
