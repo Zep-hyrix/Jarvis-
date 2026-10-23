@@ -1,0 +1,33 @@
+name: APK
+on: workflow_dispatch
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: android-actions/setup-android@v3
+      - name: Uygulamayi hazirla
+        run: |
+          mkdir app && cd app
+          npm init -y
+          npm i @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
+          mkdir www
+          echo '<!doctype html><title>JARVIS</title>' > www/index.html
+          echo '{"appId":"com.zephyrix.jarvis","appName":"JARVIS","webDir":"www","server":{"url":"https://zep-hyrix.github.io/Jarvis-/","androidScheme":"https"}}' > capacitor.config.json
+          npx cap add android
+      - name: APK derle
+        run: |
+          cd app/android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jarvis-apk
+          path: app/android/app/build/outputs/apk/debug/app-debug.apk
