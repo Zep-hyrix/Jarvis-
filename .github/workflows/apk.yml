@@ -133,6 +133,39 @@ jobs:
             }
           }
           EOF
+      - name: Simge ve acilis ekrani
+        run: |
+          cd app
+          python3 -m pip install --break-system-packages pillow
+          python3 - <<'PY'
+          import os, glob
+          from PIL import Image
+          res = "android/app/src/main/res"
+          src = Image.open("../ikon-512.png").convert("RGBA")
+          for d, n in {"mdpi": 48, "hdpi": 72, "xhdpi": 96, "xxhdpi": 144, "xxxhdpi": 192}.items():
+              p = res + "/mipmap-" + d
+              assert os.path.isdir(p), p
+              im = src.resize((n, n), Image.LANCZOS)
+              im.save(p + "/ic_launcher.png")
+              im.save(p + "/ic_launcher_round.png")
+          for f in glob.glob(res + "/drawable*/splash.png"):
+              os.remove(f)
+          xml = """<?xml version="1.0" encoding="utf-8"?>
+          <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+            <item>
+              <shape android:shape="rectangle">
+                <solid android:color="#02040A"/>
+              </shape>
+            </item>
+            <item android:gravity="center" android:width="160dp" android:height="160dp">
+              <bitmap android:src="@mipmap/ic_launcher" android:gravity="fill"/>
+            </item>
+          </layer-list>
+          """
+          open(res + "/drawable/splash.xml", "w").write(xml)
+          PY
+          rm -rf android/app/src/main/res/mipmap-anydpi-v26
+          ls android/app/src/main/res/drawable
       - name: APK derle
         run: |
           cd app/android
