@@ -42,7 +42,7 @@ canvas{width:100%;height:34vh;display:block;flex:none}
 #dv{display:none}
 .sec.sw{flex-direction:row;align-items:center;justify-content:space-between;font-size:15px}
 .sw input{width:24px;height:24px}
-#toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#0a2540;border:1px solid var(--ac);border-radius:10px;padding:10px 14px;display:none;z-index:9;max-width:88vw;text-align:center}
+#toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#0a2540;border:1px solid var(--ac);border-radius:10px;padding:10px 14px;display:none;z-index:30;max-width:88vw;text-align:center}
 #intro{position:fixed;inset:0;z-index:20;background:#02040a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;transition:opacity .6s}
 #intro.off{opacity:0;pointer-events:none}
 #intro .orb{position:relative;width:min(46vw,200px);aspect-ratio:1;border-radius:50%;box-shadow:0 0 70px var(--ac),inset 0 0 40px var(--ac);animation:pl 2s ease-in-out infinite}
@@ -60,6 +60,21 @@ canvas{width:100%;height:34vh;display:block;flex:none}
 @keyframes r1{to{transform:rotate(360deg)}}
 @keyframes r2{from{transform:rotateX(70deg) rotate(0)}to{transform:rotateX(70deg) rotate(360deg)}}
 @keyframes r3{from{transform:rotateY(70deg) rotate(0)}to{transform:rotateY(70deg) rotate(360deg)}}
+#wz{position:fixed;inset:0;z-index:15;background:#02040a;display:none;flex-direction:column}
+#wtrack{height:4px;background:#12233a;flex:none}
+#wbar{display:block;height:100%;width:0;background:var(--ac);box-shadow:0 0 12px var(--ac);transition:width .4s}
+#wc{flex:1;overflow-y:auto;padding:28px 22px;width:min(100%,520px);margin:0 auto;display:flex;flex-direction:column;gap:12px;position:relative}
+#wc h2{margin:0;font-weight:300;letter-spacing:2px;color:var(--ac)}
+#wc small{color:var(--mut)}
+#wc p{margin:0;line-height:1.5}
+#wc ol,#wc ul{padding-left:20px;margin:0;line-height:1.7}
+#wc label{font-size:14px;color:var(--mut);margin-top:6px}
+#wc input:not([type=checkbox]){width:100%}
+#w_cl{height:44px;padding:4px}
+#wst{min-height:20px;font-size:14px}
+#wbt{display:flex;gap:8px;margin-top:auto;padding-top:16px}
+#wbt #wnext{flex:1}
+#wx{position:absolute;right:14px;top:10px;min-height:36px;display:none}
 </style>
 </head>
 <body>
@@ -85,6 +100,7 @@ canvas{width:100%;height:34vh;display:block;flex:none}
     <label>Çekirdek rengi</label><input id="cl" type="color">
     <label>API anahtarı</label><input id="key" type="password" placeholder="Gemini API anahtarı">
   </div>
+  <div class="sec"><button id="wopen">Kurulum rehberi</button></div>
   <div class="sec sw"><span>Cevapları otomatik oku</span><input type="checkbox" id="au"></div>
   <div class="sec" id="dv">
     <label>Sohbet modeli</label><input id="model">
@@ -92,6 +108,9 @@ canvas{width:100%;height:34vh;display:block;flex:none}
   </div>
   <div class="sec sw"><span>Geliştirici modu</span><input type="checkbox" id="dev"></div>
 </aside>
+<div id="wz"><div id="wtrack"><b id="wbar"></b></div>
+  <div id="wc"><button id="wx" aria-label="Kapat">×</button><small id="wn"></small><h2 id="wt"></h2><div id="wb"></div><div id="wst"></div>
+    <div id="wbt"><button id="wback">Geri</button><button id="wskip">Atla</button><button id="wnext">Devam</button></div></div></div>
 <div id="toast"></div>
 <script>
 const $=id=>document.getElementById(id);
@@ -159,7 +178,7 @@ const openMenu=()=>{$("dr").classList.add("open");$("ov").style.display="block"}
 const closeMenu=()=>{$("dr").classList.remove("open");$("ov").style.display="none"};
 $("burger").onclick=openMenu;$("ov").onclick=closeMenu;
 function hello(){
-  if(!S.key){render1({r:"a",sp:false,t:"Merhaba. Menüden API anahtarını gir, sonra konuşabiliriz."});openMenu()}
+  if(!S.key){render1({r:"a",sp:false,t:"Merhaba. API anahtarını girince konuşabiliriz."})}
   else render1({r:"a",sp:false,t:"Hazırım. Yazabilir, konuşabilir ya da fotoğraf gönderebilirsin."});
 }
 function newChat(){cur={id:Date.now(),title:"",ts:Date.now(),msgs:[]};log.innerHTML="";closeMenu();hello();refreshList()}
@@ -405,9 +424,60 @@ async function recordAsk(){
   mr.start();
 }
 
+/* ---------- kurulum rehberi ---------- */
+function openLink(u){const p=JP();if(p&&p.openUrl)p.openUrl({url:u}).catch(()=>{});else window.open(u,"_blank")}
+function wst(m,k){const e=$("wst");e.textContent=m;e.style.color=k==="n"?"var(--mut)":k===true?"#7be0a0":"#ff8a8a"}
+const WZ=[
+ {t:"Hoş geldin",h:`<p>Birkaç adımda kurulumu bitirelim. Her şeyi sonra ☰ menüsünden değiştirebilirsin.</p><label>Yapay zekanın adı</label><input id="w_an"><label>Çekirdek rengi</label><input id="w_cl" type="color">`,
+  init(){$("w_an").value=S.name;$("w_cl").value=S.color;$("w_cl").oninput=e=>{S.color=e.target.value;applyColor()}},
+  ok(){S.name=$("w_an").value.trim()||"JARVIS";S.color=$("w_cl").value;keep();applyUI();return true}},
+ {t:"API anahtarı",h:`<p>JARVIS’in beyni Google Gemini. Bunun için ücretsiz bir anahtar gerekiyor (kullanım sınırlarını Google belirler).</p><ol><li>Aşağıdaki düğmeye bas.</li><li>Google hesabınla giriş yap.</li><li>“Create API key” de ve anahtarı kopyala.</li><li>Buraya yapıştır.</li></ol><button id="w_go">Google AI Studio’yu aç</button><label>API anahtarı</label><input id="w_key" type="password" placeholder="AIza…">`,
+  init(){$("w_key").value=S.key;$("w_go").onclick=()=>openLink("https://aistudio.google.com/apikey")},
+  async ok(){
+    const k=$("w_key").value.trim();
+    if(!k){wst("Önce anahtarı yapıştır.");return false}
+    wst("Kontrol ediliyor…","n");
+    try{
+      const r=await fetch(API.slice(0,-1)+"?pageSize=1&key="+encodeURIComponent(k));
+      if(!r.ok){const j=await r.json().catch(()=>({}));wst(errMsg(r.status,j.error&&j.error.message||""));return false}
+    }catch(e){wst("İnternet bağlantısı yok ya da istek ulaşmadı.");return false}
+    S.key=k;keep();applyUI();return true;
+  }},
+ {t:"Mikrofon",skip:true,h:`<p>Konuşarak komut vermek için mikrofon izni gerekir. İstemezsen atlayabilirsin, yazarak da kullanabilirsin.</p><button id="w_mic">İzin ver</button>`,
+  init(){$("w_mic").onclick=async()=>{try{const m=await navigator.mediaDevices.getUserMedia({audio:true});m.getTracks().forEach(t=>t.stop());wst("Mikrofon izni verildi ✓",true)}catch(e){wst("İzin alınamadı: "+(e.message||e.name))}}}},
+ {t:"Ses",h:`<p>Cevaplar sesli okunsun mu? Her cevabın yanındaki 🔊 düğmesiyle istediğini de dinleyebilirsin.</p><label><input type="checkbox" id="w_au"> Cevapları otomatik oku</label><button id="w_sp">Sesi dene</button><p>Cihazında Türkçe ses motoru yoksa ses Gemini’den gelir ve kotandan harcar.</p>`,
+  init(){$("w_au").checked=S.auto;$("w_sp").onclick=()=>speak("Merhaba, ben "+S.name+". Seni duyabiliyorum.")},
+  ok(){S.auto=$("w_au").checked;keep();$("au").checked=S.auto;stopTTS();setS("idle");return true}},
+ {t:"Hazırsın",h:`<p>Kurulum tamam. Şunları dene:</p><ul><li>“Saat kaç?”</li><li>“Yarın İstanbul’da hava nasıl?”</li><li>Fotoğraf ekle ve “Bu ne?” diye sor</li><li>“Yarın sabah 7’ye alarm kur” (sadece uygulamada)</li></ul><p>Ayarlar ve bu rehber her zaman soldaki ☰ menüsünde.</p>`}
+];
+let wi=0;
+function wz(i){
+  wi=i;const st=WZ[i];
+  $("wbar").style.width=((i+1)/WZ.length*100)+"%";
+  $("wn").textContent=(i+1)+" / "+WZ.length;$("wt").textContent=st.t;$("wb").innerHTML=st.h;$("wst").textContent="";
+  if(st.init)st.init();
+  $("wback").style.visibility=i?"visible":"hidden";
+  $("wskip").style.display=st.skip?"inline-block":"none";
+  $("wnext").textContent=i===WZ.length-1?"Başla":"Devam";
+}
+function wShow(i){$("wz").style.display="flex";$("wx").style.display=S.key?"block":"none";wz(i)}
+$("wnext").onclick=async()=>{
+  const st=WZ[wi];wst("");
+  if(st.ok&&!(await st.ok()))return;
+  if(wi===WZ.length-1){
+    S.done=true;keep();$("wz").style.display="none";stopTTS();
+    if(!cur.msgs.length){log.innerHTML="";hello()}
+  }else wz(wi+1);
+};
+$("wback").onclick=()=>{wst("");wz(wi-1)};
+$("wskip").onclick=()=>{wst("");wz(wi+1)};
+$("wx").onclick=()=>{$("wz").style.display="none";stopTTS();setS("idle")};
+$("wopen").onclick=()=>{closeMenu();wShow(0)};
+
 /* ---------- başlat ---------- */
 applyUI();fit();draw();
 $("inn").textContent=S.name;
+if(!S.done&&!S.key)wShow(0);
 setTimeout(()=>{$("intro").classList.add("off");setTimeout(()=>$("intro").remove(),700)},2000);
 newChat();
 (async()=>{await refreshList();if(chats.length&&!cur.msgs.length)openChat(chats[0])})();
