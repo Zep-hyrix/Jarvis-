@@ -138,7 +138,7 @@ jobs:
           cd app
           python3 -m pip install --break-system-packages pillow
           python3 - <<'PY'
-          import os, glob
+          import os, glob, re
           from PIL import Image
           res = "android/app/src/main/res"
           src = Image.open("../ikon-512.png").convert("RGBA")
@@ -150,22 +150,23 @@ jobs:
               im.save(p + "/ic_launcher_round.png")
           for f in glob.glob(res + "/drawable*/splash.png"):
               os.remove(f)
-          xml = """<?xml version="1.0" encoding="utf-8"?>
-          <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-            <item>
-              <shape android:shape="rectangle">
-                <solid android:color="#02040A"/>
-              </shape>
-            </item>
-            <item android:gravity="center" android:width="160dp" android:height="160dp">
-              <bitmap android:src="@mipmap/ic_launcher" android:gravity="fill"/>
-            </item>
-          </layer-list>
-          """
-          open(res + "/drawable/splash.xml", "w").write(xml)
+          open(res + "/drawable/splash.xml", "w").write("""<?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+            <solid android:color="#02040A"/>
+          </shape>
+          """)
+          open(res + "/drawable/splash_empty.xml", "w").write("""<?xml version="1.0" encoding="utf-8"?>
+          <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24"/>
+          """)
+          sp = res + "/values/styles.xml"
+          t = open(sp, encoding="utf-8").read()
+          add = '    <item name="windowSplashScreenAnimatedIcon">@drawable/splash_empty</item>\n    <item name="windowSplashScreenBackground">#02040A</item>\n'
+          t2 = re.sub(r'(<style name="AppTheme\.NoActionBarLaunch"[^>]*>)', lambda m: m.group(1) + "\n" + add, t, count=1)
+          assert t2 != t
+          open(sp, "w", encoding="utf-8").write(t2)
           PY
           rm -rf android/app/src/main/res/mipmap-anydpi-v26
-          ls android/app/src/main/res/drawable
+          cat android/app/src/main/res/values/styles.xml
       - name: APK derle
         run: |
           cd app/android
