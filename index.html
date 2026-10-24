@@ -43,9 +43,27 @@ canvas{width:100%;height:34vh;display:block;flex:none}
 .sec.sw{flex-direction:row;align-items:center;justify-content:space-between;font-size:15px}
 .sw input{width:24px;height:24px}
 #toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#0a2540;border:1px solid var(--ac);border-radius:10px;padding:10px 14px;display:none;z-index:9;max-width:88vw;text-align:center}
+#intro{position:fixed;inset:0;z-index:20;background:#02040a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;transition:opacity .6s}
+#intro.off{opacity:0;pointer-events:none}
+#intro .orb{position:relative;width:min(46vw,200px);aspect-ratio:1;border-radius:50%;box-shadow:0 0 70px var(--ac),inset 0 0 40px var(--ac);animation:pl 2s ease-in-out infinite}
+#intro .orb i{position:absolute;inset:0;border:2px solid var(--ac);border-radius:50%;opacity:.7}
+#intro .orb i:nth-child(1){animation:r1 3s linear infinite}
+#intro .orb i:nth-child(2){animation:r2 4s linear infinite}
+#intro .orb i:nth-child(3){animation:r3 5s linear infinite}
+#intro h1{margin:0;font-weight:300;font-size:28px;letter-spacing:.5em;padding-left:.5em;color:var(--ac);animation:fi 1.3s ease both}
+#intro p{margin:0;font-size:13px;color:var(--mut);animation:fi 1.6s ease both}
+#intro .bar{width:min(50vw,220px);height:3px;background:#12233a;border-radius:2px;overflow:hidden}
+#intro .bar b{display:block;height:100%;width:0;background:var(--ac);animation:ld 1.7s ease forwards}
+@keyframes pl{50%{transform:scale(1.07)}}
+@keyframes fi{from{opacity:0;letter-spacing:1em}}
+@keyframes ld{to{width:100%}}
+@keyframes r1{to{transform:rotate(360deg)}}
+@keyframes r2{from{transform:rotateX(70deg) rotate(0)}to{transform:rotateX(70deg) rotate(360deg)}}
+@keyframes r3{from{transform:rotateY(70deg) rotate(0)}to{transform:rotateY(70deg) rotate(360deg)}}
 </style>
 </head>
 <body>
+<div id="intro"><div class="orb"><i></i><i></i><i></i></div><h1 id="inn">JARVIS</h1><p>Sistem başlatılıyor…</p><div class="bar"><b></b></div></div>
 <div id="top"><button id="burger" aria-label="Menü">☰</button><b id="nm">JARVIS</b></div>
 <canvas id="c"></canvas>
 <div id="log"></div>
@@ -389,6 +407,8 @@ async function recordAsk(){
 
 /* ---------- başlat ---------- */
 applyUI();fit();draw();
+$("inn").textContent=S.name;
+setTimeout(()=>{$("intro").classList.add("off");setTimeout(()=>$("intro").remove(),700)},2000);
 newChat();
 (async()=>{await refreshList();if(chats.length&&!cur.msgs.length)openChat(chats[0])})();
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
