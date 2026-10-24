@@ -395,18 +395,7 @@ async function speak(t){
 $("stop").onclick=()=>{stopTTS();setS("idle")};
 function send(){const v=$("t").value.trim();if(!v&&!pend)return;const q=v||"Bu görseli anlat.";$("t").value="";ask(q).catch(e=>{render1({r:"e",t:"Hata: "+e.message});$("t").value=q})}
 $("send").onclick=send;$("t").onkeydown=e=>{if(e.key==="Enter")send()};
-const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-let rec=null;
-$("mic").onclick=()=>{
-  if(!SR){recordAsk();return}
-  if(rec){rec.stop();return}
-  rec=new SR();rec.lang="tr-TR";rec.interimResults=false;
-  rec.onstart=()=>{setS("listen");$("mic").classList.add("on")};
-  rec.onresult=e=>{ask(e.results[0][0].transcript)};
-  rec.onerror=e=>render1({r:"e",t:"Mikrofon hatası: "+e.error});
-  rec.onend=()=>{rec=null;$("mic").classList.remove("on");if(state==="listen")setS("idle")};
-  rec.start();
-};
+$("mic").onclick=recordAsk;
 
 /* ---------- ses kaydı (uygulama içi mikrofon) ---------- */
 const b64blob=b=>new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result.split(",")[1]);f.readAsDataURL(b)});
@@ -428,26 +417,44 @@ async function transcribe(blob){
   return parts(j).map(p=>p.text||"").join("").trim();
 }
 let mr=null,chunks=[];
+const micUI=on=>{$("mic").classList.toggle("on",on);$("mic").textContent=on?"⏹":"🎤"};
 async function recordAsk(){
-  if(mr){mr.stop();return}
+  if(mr){if(mr.state==="recording")mr.stop();return}
   if(!navigator.mediaDevices||!window.MediaRecorder){render1({r:"e",t:"Bu cihazda ses kaydı desteklenmiyor."});return}
   if(!S.key){toast("Önce menüden API anahtarını gir.");openMenu();return}
+  stopTTS();
   let st;
   try{st=await navigator.mediaDevices.getUserMedia({audio:true})}
   catch(e){render1({r:"e",t:"Mikrofon izni alınamadı: "+(e.message||e.name)});return}
-  chunks=[];mr=new MediaRecorder(st);
-  mr.ondataavailable=e=>chunks.push(e.data);
-  mr.onstart=()=>{setS("listen");$("mic").classList.add("on");toast("Dinliyorum. Bitirince 🎤’ye tekrar bas.");
-    setTimeout(()=>{if(mr&&mr.state==="recording")mr.stop()},30000)};
-  mr.onstop=async()=>{
-    st.getTracks().forEach(t=>t.stop());$("mic").classList.remove("on");
-    const type=mr.mimeType||"audio/webm";mr=null;setS("think");
+  let rec;
+  try{rec=new MediaRecorder(st)}
+  catch(e){st.getTracks().forEach(t=>t.stop());render1({r:"e",t:"Ses kaydı başlatılamadı: "+(e.message||e)});return}
+  mr=rec;chunks=[];
+  let iv=null,ac=null;
+  const done=()=>{if(iv)clearInterval(iv);try{if(ac)ac.close()}catch(e){}st.getTracks().forEach(t=>t.stop())};
+  rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
+  rec.onerror=()=>{done();mr=null;micUI(false);setS("idle");render1({r:"e",t:"Ses kaydı sırasında hata oluştu."})};
+  rec.onstop=async()=>{
+    done();const type=rec.mimeType||"audio/webm";mr=null;micUI(false);setS("think");
     const blob=new Blob(chunks,{type});
-    if(blob.size<1000){setS("idle");toast("Ses alınamadı.");return}
+    if(blob.size<1500){setS("idle");toast("Ses alınamadı, tekrar dene.");return}
     try{const q=await transcribe(blob);setS("idle");if(q)await ask(q);else toast("Ne dediğini anlayamadım.")}
-    catch(e){setS("idle");render1({r:"e",t:"Ses yazıya çevrilemedi: "+e.message})}
+    catch(e){setS("idle");render1({r:"e",t:"Ses yazıya çevrilemedi: "+(e.message||e)})}
   };
-  mr.start();
+  try{
+    ac=new (window.AudioContext||window.webkitAudioContext)();if(ac.resume)ac.resume();
+    const an=ac.createAnalyser();an.fftSize=1024;ac.createMediaStreamSource(st).connect(an);
+    const buf=new Uint8Array(an.fftSize);let heard=false,quiet=0,t0=0;
+    iv=setInterval(()=>{
+      an.getByteTimeDomainData(buf);let m=0;for(let i=0;i<buf.length;i++)m=Math.max(m,Math.abs(buf[i]-128));
+      t0+=100;
+      if(m>12){heard=true;quiet=0}else if(heard)quiet+=100;
+      if(rec.state==="recording"&&((heard&&quiet>=1600)||(!heard&&t0>=8000)))rec.stop();
+    },100);
+  }catch(e){}
+  setTimeout(()=>{if(rec.state==="recording")rec.stop()},30000);
+  rec.start();micUI(true);setS("listen");
+  toast("Dinliyorum… Susunca kendiliğinden biter, ⏹ ile de durdurabilirsin.");
 }
 
 /* ---------- yapay zeka kişilikleri ---------- */
