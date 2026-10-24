@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#02040a">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="ikon-192.png">
-<title>JARVIS</title>
+<title>Pulsar</title>
 <style>
 :root{--bg:#02040a;--fg:#cfe8ff;--ac:#3fb6ff;--mut:#6b86a3;--ln:#12233a;--pn:#06101e}
 *{box-sizing:border-box}
@@ -98,8 +98,8 @@ canvas{width:100%;height:34vh;display:block;flex:none}
 </style>
 </head>
 <body>
-<div id="intro"><div class="orb"><i></i><i></i><i></i></div><h1 id="inn">JARVIS</h1><p>Sistem başlatılıyor…</p><div class="bar"><b></b></div></div>
-<div id="top"><button id="burger" aria-label="Menü">☰</button><b id="nm" style="display:none">JARVIS</b><button id="pb" aria-label="Yapay zeka seç"><i class="dot" id="pbd"></i><span id="pbn">Orion</span> ▾</button></div>
+<div id="intro"><div class="orb"><i></i><i></i><i></i></div><h1 id="inn">PULSAR</h1><p>Sistem başlatılıyor…</p><div class="bar"><b></b></div></div>
+<div id="top"><button id="burger" aria-label="Menü">☰</button><b id="nm" style="display:none">Pulsar</b><button id="pb" aria-label="Yapay zeka seç"><i class="dot" id="pbd"></i><span id="pbn">Orion</span> ▾</button></div>
 <canvas id="c"></canvas>
 <div id="log"></div>
 <div id="pv"><img id="pi" alt=""><button id="px" aria-label="Görseli kaldır">×</button></div>
@@ -142,7 +142,7 @@ canvas{width:100%;height:34vh;display:block;flex:none}
 <script>
 const $=id=>document.getElementById(id);
 const API="https://generativelanguage.googleapis.com/v1beta/models/";
-const D={key:"",model:"gemini-3.5-flash-lite",tts:"gemini-3.8-flash-lite-tts",auto:true,persona:"orion",custom:[],name:"JARVIS",color:"#3fb6ff",dev:false};
+const D={key:"",model:"gemini-3.5-flash-lite",tts:"gemini-3.8-flash-lite-tts",auto:true,persona:"orion",custom:[],name:"Orion",color:"#3fb6ff",dev:false};
 let S={...D};
 try{
   const raw=localStorage.getItem("js");
@@ -231,7 +231,7 @@ $("nw").onclick=newChat;
 
 /* ---------- ayarlar ---------- */
 function applyUI(){
-  document.title=S.name;$("nm").textContent=S.name;
+  document.title="Pulsar";$("nm").textContent=S.name;
   $("key").value=S.key;$("model").value=S.model;$("tts").value=S.tts;$("dev").checked=S.dev;$("au").checked=S.auto;
   $("dv").style.display=S.dev?"flex":"none";$("key").readOnly=!(S.dev||!S.key);applyColor();
 }
@@ -308,8 +308,8 @@ async function runTool(n,a){
       if(n==="web_ara"){await p.webSearch({query:a.sorgu||""});return{sonuc:"Arama açıldı."}}
       if(n==="youtube_ara"){await p.openUrl({url:"https://www.youtube.com/results?search_query="+encodeURIComponent(a.sorgu||"")});return{sonuc:"YouTube araması açıldı."}}
       if(n==="uygulama_ac"){const r=await p.openApp({name:a.ad||""});return{sonuc:((r&&r.app)||a.ad)+" açıldı."}}
-      if(n==="alarm_kur")await p.setAlarm({hour:Math.round(a.saat),minute:Math.round(a.dakika||0),label:a.etiket||"JARVIS"});
-      else await p.setTimer({seconds:Math.round(a.saniye),label:a.etiket||"JARVIS"});
+      if(n==="alarm_kur")await p.setAlarm({hour:Math.round(a.saat),minute:Math.round(a.dakika||0),label:a.etiket||"Pulsar"});
+      else await p.setTimer({seconds:Math.round(a.saniye),label:a.etiket||"Pulsar"});
       return{sonuc:"Kuruldu."};
     }catch(e){return{hata:"Telefon komutu uygulanamadı: "+(e.message||e)}}
   }
@@ -515,7 +515,7 @@ const WZ=[
  {t:"Yapay zeka seç",h:`<p>Birini seç. Sonra üstteki düğmeden değiştirebilir ya da kendi yapay zekanı ekleyebilirsin.</p><div id="w_pl"></div>`,
   init(){const l=$("w_pl");l.innerHTML="";PRE.forEach(p=>{const b=document.createElement("button"),d=document.createElement("i");b.className="wp"+(p.id===S.persona?" on":"");d.className="dot";d.style.background=p.color;b.append(d," "+p.name+" · "+p.tag);
     b.onclick=()=>{applyP(p.id);if(cur&&!cur.msgs.length)cur.pid=p.id;[...l.children].forEach(x=>x.classList.remove("on"));b.classList.add("on")};l.append(b)})}},
- {t:"API anahtarı",h:`<p>JARVIS’in beyni Google Gemini. Bunun için ücretsiz bir anahtar gerekiyor (kullanım sınırlarını Google belirler).</p><ol><li>Aşağıdaki düğmeye bas.</li><li>Google hesabınla giriş yap.</li><li>“Create API key” de ve anahtarı kopyala.</li><li>Buraya yapıştır.</li></ol><button id="w_go">Google AI Studio’yu aç</button><label>API anahtarı</label><input id="w_key" type="password" placeholder="AIza…">`,
+ {t:"API anahtarı",h:`<p>Pulsar’ın beyni Google Gemini. Bunun için ücretsiz bir anahtar gerekiyor (kullanım sınırlarını Google belirler).</p><ol><li>Aşağıdaki düğmeye bas.</li><li>Google hesabınla giriş yap.</li><li>“Create API key” de ve anahtarı kopyala.</li><li>Buraya yapıştır.</li></ol><button id="w_go">Google AI Studio’yu aç</button><label>API anahtarı</label><input id="w_key" type="password" placeholder="AIza…">`,
   init(){$("w_key").value=S.key;$("w_go").onclick=()=>openLink("https://aistudio.google.com/apikey")},
   async ok(){
     const k=$("w_key").value.trim();
@@ -560,7 +560,6 @@ $("wopen").onclick=()=>{closeMenu();wShow(0)};
 
 /* ---------- başlat ---------- */
 applyP(S.persona||"orion");fit();draw();
-$("inn").textContent=S.name;
 if(!S.done&&!S.key)wShow(0);
 setTimeout(()=>{$("intro").classList.add("off");setTimeout(()=>$("intro").remove(),700)},2000);
 newChat();
