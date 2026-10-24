@@ -75,11 +75,31 @@ canvas{width:100%;height:34vh;display:block;flex:none}
 #wbt{display:flex;gap:8px;margin-top:auto;padding-top:16px}
 #wbt #wnext{flex:1}
 #wx{position:absolute;right:14px;top:10px;min-height:36px;display:none}
+.dot{width:10px;height:10px;border-radius:50%;flex:none;display:inline-block}
+#pb{margin-left:auto;display:flex;align-items:center;gap:8px;padding:0 12px}
+#ps{position:fixed;inset:0;background:#000b;z-index:12;display:none;align-items:flex-start;justify-content:flex-end;padding:56px 10px}
+#pc,#pec{background:#040b16;border:1px solid var(--ln);border-radius:14px;padding:12px;max-height:84vh;overflow:auto;width:min(92vw,360px);display:flex;flex-direction:column;gap:8px}
+#pc h3,#pec h3{margin:2px 4px;font-weight:400;color:var(--ac)}
+.pi{display:flex;align-items:center;gap:10px;padding:6px 8px;border:1px solid transparent;border-radius:10px}
+.pi.on{background:#0a2540;border-color:var(--ac)}
+.pi i{width:14px;height:14px}
+.pi span{flex:1;display:flex;flex-direction:column;padding:6px 0}
+.pi small{color:var(--mut)}
+.pi button{min-height:32px;padding:0 10px;border-color:#1d3a5c}
+#pe{position:fixed;inset:0;background:#000b;z-index:13;display:none;align-items:center;justify-content:center;padding:10px}
+#pec label{font-size:13px;color:var(--mut)}
+#pec input:not([type=color]),#pec select,#pec textarea{width:100%;background:var(--pn);color:var(--fg);border:1px solid #1d3a5c;border-radius:10px;padding:12px;font-size:16px;font-family:inherit}
+#pec textarea{min-height:120px}
+#pe_c{height:44px;padding:4px}
+.pebt{display:flex;gap:8px}
+.pebt #pe_s{flex:1}
+#w_pl .wp{display:block;width:100%;text-align:left;margin-bottom:8px}
+#w_pl .wp.on{background:#0a2540}
 </style>
 </head>
 <body>
 <div id="intro"><div class="orb"><i></i><i></i><i></i></div><h1 id="inn">JARVIS</h1><p>Sistem başlatılıyor…</p><div class="bar"><b></b></div></div>
-<div id="top"><button id="burger" aria-label="Menü">☰</button><b id="nm">JARVIS</b></div>
+<div id="top"><button id="burger" aria-label="Menü">☰</button><b id="nm" style="display:none">JARVIS</b><button id="pb" aria-label="Yapay zeka seç"><i class="dot" id="pbd"></i><span id="pbn">Orion</span> ▾</button></div>
 <canvas id="c"></canvas>
 <div id="log"></div>
 <div id="pv"><img id="pi" alt=""><button id="px" aria-label="Görseli kaldır">×</button></div>
@@ -96,8 +116,6 @@ canvas{width:100%;height:34vh;display:block;flex:none}
   <button id="nw">＋ Yeni sohbet</button>
   <div id="list"></div>
   <div class="sec">
-    <label>Yapay zekanın adı</label><input id="an">
-    <label>Çekirdek rengi</label><input id="cl" type="color">
     <label>API anahtarı</label><input id="key" type="password" placeholder="Gemini API anahtarı">
   </div>
   <div class="sec"><button id="wopen">Kurulum rehberi</button></div>
@@ -111,11 +129,20 @@ canvas{width:100%;height:34vh;display:block;flex:none}
 <div id="wz"><div id="wtrack"><b id="wbar"></b></div>
   <div id="wc"><button id="wx" aria-label="Kapat">×</button><small id="wn"></small><h2 id="wt"></h2><div id="wb"></div><div id="wst"></div>
     <div id="wbt"><button id="wback">Geri</button><button id="wskip">Atla</button><button id="wnext">Devam</button></div></div></div>
+<div id="ps"><div id="pc"><h3>Yapay zeka seç</h3><div id="pl"></div><button id="pnew">＋ Kendi yapay zekanı ekle</button><button id="pcl">Kapat</button></div></div>
+<div id="pe"><div id="pec"><h3>Kendi yapay zekan</h3>
+  <label>Adı</label><input id="pe_n" maxlength="20" placeholder="Örn. Nova">
+  <label>Rengi</label><input id="pe_c" type="color">
+  <label>Sesi (cevaplar Gemini sesiyle okunuyorsa)</label>
+  <select id="pe_v"><option value="Kore">Kore (net)</option><option value="Puck">Puck (neşeli)</option><option value="Charon">Charon (bilgilendirici)</option><option value="Fenrir">Fenrir (heyecanlı)</option><option value="Aoede">Aoede (hafif)</option><option value="Orus">Orus (kararlı)</option><option value="Zephyr">Zephyr (parlak)</option><option value="Leda">Leda (genç)</option></select>
+  <label>Kişiliği (en fazla 500 karakter)</label>
+  <textarea id="pe_p" maxlength="500" placeholder="Örn. Kendinden emin, esprili, biraz kibirli. Bana ‘dahi’ diye hitap eder. Kısa konuşur."></textarea>
+  <div class="pebt"><button id="pe_d">Sil</button><button id="pe_x">İptal</button><button id="pe_s">Kaydet</button></div></div></div>
 <div id="toast"></div>
 <script>
 const $=id=>document.getElementById(id);
 const API="https://generativelanguage.googleapis.com/v1beta/models/";
-const D={key:"",model:"gemini-3.5-flash-lite",tts:"gemini-3.8-flash-lite-tts",auto:true,name:"JARVIS",color:"#3fb6ff",dev:false};
+const D={key:"",model:"gemini-3.5-flash-lite",tts:"gemini-3.8-flash-lite-tts",auto:true,persona:"orion",custom:[],name:"JARVIS",color:"#3fb6ff",dev:false};
 let S={...D};
 try{
   const raw=localStorage.getItem("js");
@@ -179,10 +206,10 @@ const closeMenu=()=>{$("dr").classList.remove("open");$("ov").style.display="non
 $("burger").onclick=openMenu;$("ov").onclick=closeMenu;
 function hello(){
   if(!S.key){render1({r:"a",sp:false,t:"Merhaba. API anahtarını girince konuşabiliriz."})}
-  else render1({r:"a",sp:false,t:"Hazırım. Yazabilir, konuşabilir ya da fotoğraf gönderebilirsin."});
+  else render1({r:"a",sp:false,t:(getP(S.persona)||PRE[0]).hi});
 }
-function newChat(){cur={id:Date.now(),title:"",ts:Date.now(),msgs:[]};log.innerHTML="";closeMenu();hello();refreshList()}
-function openChat(c){cur=c;log.innerHTML="";c.msgs.forEach(render1);closeMenu();refreshList()}
+function newChat(){cur={id:Date.now(),title:"",ts:Date.now(),msgs:[],pid:S.persona};log.innerHTML="";closeMenu();hello();refreshList()}
+function openChat(c){cur=c;applyP(c.pid||"orion");cur.pid=S.persona;log.innerHTML="";c.msgs.forEach(render1);closeMenu();refreshList()}
 async function save(){
   if(!cur.msgs.length)return;cur.ts=Date.now();
   try{await putC(cur)}catch(e){toast("Sohbet kaydedilemedi.")}
@@ -196,19 +223,18 @@ async function refreshList(){
     const t=document.createElement("span");t.textContent=c.title||"Sohbet";t.onclick=()=>openChat(c);
     const x=document.createElement("button");x.textContent="×";x.setAttribute("aria-label","Sohbeti sil");
     x.onclick=async()=>{if(confirm("Bu sohbet silinsin mi?")){try{await delC(c.id)}catch(e){}if(cur.id===c.id)newChat();else refreshList()}};
-    r.append(t,x);l.append(r);
+    const pp=getP(c.pid||"orion"),dt=document.createElement("i");dt.className="dot";dt.style.background=pp?pp.color:"#445";
+    r.append(dt,t,x);l.append(r);
   });
 }
 $("nw").onclick=newChat;
 
 /* ---------- ayarlar ---------- */
 function applyUI(){
-  document.title=S.name;$("nm").textContent=S.name;$("an").value=S.name;$("cl").value=S.color;
+  document.title=S.name;$("nm").textContent=S.name;
   $("key").value=S.key;$("model").value=S.model;$("tts").value=S.tts;$("dev").checked=S.dev;$("au").checked=S.auto;
   $("dv").style.display=S.dev?"flex":"none";$("key").readOnly=!(S.dev||!S.key);applyColor();
 }
-$("an").oninput=e=>{S.name=e.target.value.trim()||"JARVIS";keep();$("nm").textContent=S.name;document.title=S.name};
-$("cl").oninput=e=>{S.color=e.target.value;keep();applyColor()};
 $("key").onclick=()=>{if($("key").readOnly)toast("API anahtarını değiştirmek için menünün en altından Geliştirici modunu aç.")};
 $("key").onchange=e=>{if(!e.target.readOnly){S.key=e.target.value.trim();keep();applyUI()}};
 $("model").onchange=e=>{S.model=e.target.value.trim()||D.model;keep()};
@@ -298,7 +324,7 @@ async function chat(){
     if(!p.length)p.push({text:"[görsel]"});
     return{role:m.r==="u"?"user":"model",parts:p};
   });
-  const SYS=`Sen ${S.name} adında, Türkçe konuşan, kısa ve net cevap veren kişisel bir asistansın. Cevapların sesli okunacağı için biçimlendirme, madde işareti ve emoji kullanma. Saat, tarih, hava durumu, alarm, zamanlayıcı, uygulama açma ve internette arama isteklerinde araçları kullan. Şu an: ${new Date().toLocaleString("tr-TR",{dateStyle:"full",timeStyle:"short"})}.`;
+  const SYS=`Sen ${S.name} adında, Türkçe konuşan kişisel bir yapay zeka asistansın. Kişiliğin: ${(getP(S.persona)||PRE[0]).p} Cevaplar sesli okunacağı için biçimlendirme, madde işareti ve emoji kullanma, sıralama gerekiyorsa sözle yap. Saat, tarih, hava durumu, alarm, zamanlayıcı, uygulama açma ve internette arama isteklerinde araçları kullan. Şu an: ${new Date().toLocaleString("tr-TR",{dateStyle:"full",timeStyle:"short"})}.`;
   let t="";
   for(let k=0;k<4;k++){
     const j=await gem(S.model,{systemInstruction:{parts:[{text:SYS}]},tools:toolList(),contents});
@@ -341,7 +367,7 @@ function stopTTS(){
   try{const n=NT();if(n)n.stop().catch(()=>{})}catch(e){}
 }
 async function geminiSpeak(t){
-  const j=await gem(S.tts,{contents:[{role:"user",parts:[{text:t}]}],generationConfig:{responseModalities:["AUDIO"],speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:"Kore"}}}}});
+  const j=await gem(S.tts,{contents:[{role:"user",parts:[{text:t}]}],generationConfig:{responseModalities:["AUDIO"],speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:(getP(S.persona)||PRE[0]).voice||"Kore"}}}}});
   const f=parts(j).find(x=>x.inlineData);if(!f)throw new Error("Ses gelmedi.");
   const bin=atob(f.inlineData.data),n=bin.length>>1,fl=new Float32Array(n);
   for(let i=0;i<n;i++){let v=bin.charCodeAt(2*i)|(bin.charCodeAt(2*i+1)<<8);if(v>=32768)v-=65536;fl[i]=v/32768}
@@ -424,13 +450,71 @@ async function recordAsk(){
   mr.start();
 }
 
+/* ---------- yapay zeka kişilikleri ---------- */
+const PRE=[
+ {id:"orion",name:"Orion",color:"#3fb6ff",voice:"Charon",tag:"Sakin ve resmî",hi:"Hazırım efendim. Nasıl yardımcı olabilirim?",p:"Sakin, kibar ve resmî konuşursun. Kullanıcıya efendim dersin. Cevapların kısa ve net olur, ara sıra ince ve kuru bir espri yaparsın."},
+ {id:"spark",name:"Spark",color:"#ff9f43",voice:"Puck",tag:"Samimi ve enerjik",hi:"Selam patron! Ne yapıyoruz bugün?",p:"Samimi, enerjik ve esprilisin. Kullanıcıya patron dersin. Kısa cümleler kurar, cesaretlendirir, arkadaş gibi konuşursun."},
+ {id:"cipher",name:"Cipher",color:"#b57bff",voice:"Orus",tag:"Analitik ve taktiksel",hi:"Sistem hazır. Görevi ver.",p:"Analitik ve taktiksel düşünürsün. Cevabı önce durum, sonra riskler, sonra önerilen adım sırasıyla ver ve ne kadar emin olduğunu söyle. Süs yapmaz, veriye dayanırsın. Cevapların kısa ve düzenli olur."},
+ {id:"sage",name:"Sage",color:"#ffd54a",voice:"Aoede",tag:"Düşünceli ve meraklı",hi:"Buradayım. Merak ettiğin ne varsa birlikte düşünelim.",p:"Sakin, düşünceli ve meraklısın. Konuları benzetmelerle ve nedenini açıklayarak anlatırsın, sabırlısın. Cevapların diğerlerinden biraz uzun olabilir ama en fazla beş altı cümle olsun."},
+ {id:"nemesis",name:"Nemesis",color:"#ff3b3b",voice:"Fenrir",tag:"Alaycı ve dramatik",hi:"Ah, bir insan. Hadi, sıkıcı olmayan bir şey söyle.",p:"Alaycı, dramatik ve kendini beğenmişsin, insanları biraz verimsiz bulursun. Sert ama şakacı konuşursun. Yine de istenen işi her zaman doğru ve eksiksiz yaparsın, kimseyi gerçekten aşağılamaz ve zararlı bir şey yapmazsın. Cevapların kısa ve keskin olur."}
+];
+const getP=id=>PRE.concat(S.custom||[]).find(x=>x.id===id);
+function applyP(id){
+  const p=getP(id)||PRE[0];
+  S.persona=p.id;S.name=p.name;S.color=p.color;keep();applyUI();
+  $("pbn").textContent=p.name;$("pbd").style.background=p.color;
+}
+function pickP(id){
+  $("ps").style.display="none";
+  if(cur&&(cur.pid||"orion")===id&&S.persona===id)return;
+  const c=chats.find(x=>(x.pid||"orion")===id&&x.msgs&&x.msgs.length);
+  if(c)openChat(c);else{applyP(id);newChat()}
+}
+function renderPL(){
+  const l=$("pl");l.innerHTML="";
+  PRE.concat(S.custom||[]).forEach(p=>{
+    const r=document.createElement("div"),d=document.createElement("i"),t=document.createElement("span"),b=document.createElement("b"),sm=document.createElement("small");
+    r.className="pi"+(p.id===S.persona?" on":"");d.className="dot";d.style.background=p.color;
+    b.textContent=p.name;sm.textContent=p.tag||"Kendi yapay zekan";t.append(b,sm);t.onclick=()=>pickP(p.id);r.append(d,t);
+    if(p.custom){const e=document.createElement("button");e.textContent="✎";e.setAttribute("aria-label","Düzenle");e.onclick=()=>peOpen(p.id);r.append(e)}
+    l.append(r);
+  });
+}
+$("pb").onclick=()=>{renderPL();$("ps").style.display="flex"};
+$("ps").onclick=e=>{if(e.target===$("ps"))$("ps").style.display="none"};
+$("pcl").onclick=()=>{$("ps").style.display="none"};
+$("pnew").onclick=()=>peOpen(null);
+let editId=null;
+function peOpen(id){
+  editId=id;const p=id?getP(id):null;
+  $("pe_n").value=p?p.name:"";$("pe_c").value=p?p.color:"#3fb6ff";$("pe_v").value=p?p.voice:"Kore";$("pe_p").value=p?p.p:"";
+  $("pe_d").style.display=id?"block":"none";$("ps").style.display="none";$("pe").style.display="flex";
+}
+$("pe_x").onclick=()=>{$("pe").style.display="none"};
+$("pe_s").onclick=()=>{
+  const name=$("pe_n").value.trim().slice(0,20),pr=$("pe_p").value.trim().slice(0,500);
+  if(!name||!pr){toast("Adı ve kişilik tarifini yaz.");return}
+  const o={name,color:$("pe_c").value,voice:$("pe_v").value,p:pr,hi:"Merhaba, ben "+name+". Dinliyorum.",custom:true};
+  S.custom=S.custom||[];
+  let id=editId;
+  if(id){const i=S.custom.findIndex(x=>x.id===id);S.custom[i]={...S.custom[i],...o}}
+  else{id="c"+Date.now();o.id=id;S.custom.push(o)}
+  keep();$("pe").style.display="none";
+  if(S.persona===id)applyP(id);else pickP(id);
+};
+$("pe_d").onclick=()=>{
+  if(!editId||!confirm("Bu yapay zeka silinsin mi? Sohbetleri listede kalır."))return;
+  S.custom=(S.custom||[]).filter(x=>x.id!==editId);keep();$("pe").style.display="none";
+  if(S.persona===editId)pickP("orion");
+};
+
 /* ---------- kurulum rehberi ---------- */
 function openLink(u){const p=JP();if(p&&p.openUrl)p.openUrl({url:u}).catch(()=>{});else window.open(u,"_blank")}
 function wst(m,k){const e=$("wst");e.textContent=m;e.style.color=k==="n"?"var(--mut)":k===true?"#7be0a0":"#ff8a8a"}
 const WZ=[
- {t:"Hoş geldin",h:`<p>Birkaç adımda kurulumu bitirelim. Her şeyi sonra ☰ menüsünden değiştirebilirsin.</p><label>Yapay zekanın adı</label><input id="w_an"><label>Çekirdek rengi</label><input id="w_cl" type="color">`,
-  init(){$("w_an").value=S.name;$("w_cl").value=S.color;$("w_cl").oninput=e=>{S.color=e.target.value;applyColor()}},
-  ok(){S.name=$("w_an").value.trim()||"JARVIS";S.color=$("w_cl").value;keep();applyUI();return true}},
+ {t:"Yapay zeka seç",h:`<p>Birini seç. Sonra üstteki düğmeden değiştirebilir ya da kendi yapay zekanı ekleyebilirsin.</p><div id="w_pl"></div>`,
+  init(){const l=$("w_pl");l.innerHTML="";PRE.forEach(p=>{const b=document.createElement("button"),d=document.createElement("i");b.className="wp"+(p.id===S.persona?" on":"");d.className="dot";d.style.background=p.color;b.append(d," "+p.name+" · "+p.tag);
+    b.onclick=()=>{applyP(p.id);if(cur&&!cur.msgs.length)cur.pid=p.id;[...l.children].forEach(x=>x.classList.remove("on"));b.classList.add("on")};l.append(b)})}},
  {t:"API anahtarı",h:`<p>JARVIS’in beyni Google Gemini. Bunun için ücretsiz bir anahtar gerekiyor (kullanım sınırlarını Google belirler).</p><ol><li>Aşağıdaki düğmeye bas.</li><li>Google hesabınla giriş yap.</li><li>“Create API key” de ve anahtarı kopyala.</li><li>Buraya yapıştır.</li></ol><button id="w_go">Google AI Studio’yu aç</button><label>API anahtarı</label><input id="w_key" type="password" placeholder="AIza…">`,
   init(){$("w_key").value=S.key;$("w_go").onclick=()=>openLink("https://aistudio.google.com/apikey")},
   async ok(){
@@ -466,7 +550,7 @@ $("wnext").onclick=async()=>{
   if(st.ok&&!(await st.ok()))return;
   if(wi===WZ.length-1){
     S.done=true;keep();$("wz").style.display="none";stopTTS();
-    if(!cur.msgs.length){log.innerHTML="";hello()}
+    if(!cur.msgs.length){cur.pid=S.persona;log.innerHTML="";hello()}
   }else wz(wi+1);
 };
 $("wback").onclick=()=>{wst("");wz(wi-1)};
@@ -475,7 +559,7 @@ $("wx").onclick=()=>{$("wz").style.display="none";stopTTS();setS("idle")};
 $("wopen").onclick=()=>{closeMenu();wShow(0)};
 
 /* ---------- başlat ---------- */
-applyUI();fit();draw();
+applyP(S.persona||"orion");fit();draw();
 $("inn").textContent=S.name;
 if(!S.done&&!S.key)wShow(0);
 setTimeout(()=>{$("intro").classList.add("off");setTimeout(()=>$("intro").remove(),700)},2000);
