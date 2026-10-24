@@ -3,6 +3,8 @@ on: workflow_dispatch
 jobs:
   build:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -12,6 +14,24 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+      - name: Sabit imza
+        env:
+          SIFRE: ${{ secrets.IMZA_SIFRE }}
+        run: |
+          test -n "$SIFRE" || { echo "IMZA_SIFRE tanimli degil"; exit 1; }
+          mkdir -p ~/.android
+          if [ -f jarvis.keystore.enc ]; then
+            openssl enc -d -aes-256-cbc -pbkdf2 -pass env:SIFRE -in jarvis.keystore.enc -out ~/.android/debug.keystore
+          else
+            keytool -genkeypair -keystore ~/.android/debug.keystore -storepass android -keypass android -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 36500 -dname "CN=JARVIS,O=Jarvis,C=TR"
+            openssl enc -aes-256-cbc -pbkdf2 -salt -pass env:SIFRE -in ~/.android/debug.keystore -out jarvis.keystore.enc
+            git config user.name "github-actions"
+            git config user.email "actions@github.com"
+            git add jarvis.keystore.enc
+            git commit -m "Imza anahtari (sifreli) eklendi"
+            git push
+          fi
+          keytool -list -keystore ~/.android/debug.keystore -storepass android | head -5
       - name: Uygulamayi hazirla
         run: |
           mkdir app && cd app
