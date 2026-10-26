@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#02040a">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="ikon-192.png">
+<title>Pulsar</title>
+<style>
+:root{--bg:#02040a;--fg:#cfe8ff;--ac:#3fb6ff;--mut:#6b86a3;--ln:#12233a;--pn:#06101e}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,sans-serif}
+body{display:flex;flex-direction:column;overflow:hidden}
+button{background:#0a2540;color:var(--fg);border:1px solid var(--ac);border-radius:10px;padding:0 14px;font-size:16px;min-height:44px}
+input{background:var(--pn);color:var(--fg);border:1px solid #1d3a5c;border-radius:10px;padding:12px;font-size:16px;min-width:0}
+#top{display:flex;align-items:center;gap:12px;padding:8px 10px}
+#top b{letter-spacing:3px;font-weight:600;color:var(--ac)}
+#burger{width:44px;padding:0;font-size:22px}
+canvas{width:100%;height:34vh;display:block;flex:none}
+#log{flex:1;overflow-y:auto;padding:8px 14px;font-size:16px;line-height:1.45}
+.u{color:var(--mut);margin:8px 0}.a{margin:8px 0}.e{margin:8px 0;color:#ff8a8a}
+.u img,.a img{display:block;max-width:100%;max-height:40vh;border-radius:10px;margin-top:6px}
+.sp{min-height:32px;padding:0 8px;margin-left:8px;border-color:#1d3a5c;vertical-align:middle}
+#pv{display:none;padding:6px 10px;border-top:1px solid var(--ln)}
+#pv img{height:56px;border-radius:8px;vertical-align:middle;margin-right:8px}
+#bar{display:flex;gap:8px;padding:10px;border-top:1px solid var(--ln)}
+#t{flex:1}
+#mic.on{background:var(--ac);color:#02040a}
+#stop{display:none}
+#ov{position:fixed;inset:0;background:#0009;display:none;z-index:5}
+#dr{position:fixed;top:0;bottom:0;left:0;width:min(86vw,320px);background:#040b16;border-right:1px solid var(--ln);transform:translateX(-100%);transition:transform .2s;z-index:6;display:flex;flex-direction:column;padding:10px;gap:8px}
+#dr.open{transform:none}
+#list{flex:1;overflow-y:auto;min-height:60px}
+.ci{display:flex;align-items:center;gap:6px;padding:2px 6px;border-radius:8px}
+.ci.on{background:#0a2540}
+.ci span{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:10px 0}
+.ci button{min-height:32px;padding:0 10px;border-color:#1d3a5c}
+.sec{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--ln);padding-top:8px}
+.sec label{font-size:13px;color:var(--mut)}
+#cl{height:44px;padding:4px}
+#dv{display:none}
+.sec.sw{flex-direction:row;align-items:center;justify-content:space-between;font-size:15px}
+.sw input{width:24px;height:24px}
+#toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#0a2540;border:1px solid var(--ac);border-radius:10px;padding:10px 14px;display:none;z-index:30;max-width:88vw;text-align:center}
+#intro{position:fixed;inset:0;z-index:20;background:#02040a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;transition:opacity .6s}
+#intro.off{opacity:0;pointer-events:none}
+#intro .orb{position:relative;width:min(46vw,200px);aspect-ratio:1;border-radius:50%;box-shadow:0 0 70px var(--ac),inset 0 0 40px var(--ac);animation:pl 2s ease-in-out infinite}
+#intro .orb i{position:absolute;inset:0;border:2px solid var(--ac);border-radius:50%;opacity:.7}
+#intro .orb i:nth-child(1){animation:r1 3s linear infinite}
+#intro .orb i:nth-child(2){animation:r2 4s linear infinite}
+#intro .orb i:nth-child(3){animation:r3 5s linear infinite}
+#intro h1{margin:0;font-weight:300;font-size:28px;letter-spacing:.5em;padding-left:.5em;color:var(--ac);animation:fi 1.3s ease both}
+#intro p{margin:0;font-size:13px;color:var(--mut);animation:fi 1.6s ease both}
+#intro .bar{width:min(50vw,220px);height:3px;background:#12233a;border-radius:2px;overflow:hidden}
+#intro .bar b{display:block;height:100%;width:0;background:var(--ac);animation:ld 1.7s ease forwards}
+@keyframes pl{50%{transform:scale(1.07)}}
+@keyframes fi{from{opacity:0;letter-spacing:1em}}
+@keyframes ld{to{width:100%}}
+@keyframes r1{to{transform:rotate(360deg)}}
+@keyframes r2{from{transform:rotateX(70deg) rotate(0)}to{transform:rotateX(70deg) rotate(360deg)}}
+@keyframes r3{from{transform:rotateY(70deg) rotate(0)}to{transform:rotateY(70deg) rotate(360deg)}}
+#wz{position:fixed;inset:0;z-index:15;background:#02040a;display:none;flex-direction:column}
+#wtrack{height:4px;background:#12233a;flex:none}
+#wbar{display:block;height:100%;width:0;background:var(--ac);box-shadow:0 0 12px var(--ac);transition:width .4s}
+#wc{flex:1;overflow-y:auto;padding:28px 22px;width:min(100%,520px);margin:0 auto;display:flex;flex-direction:column;gap:12px;position:relative}
+#wc h2{margin:0;font-weight:300;letter-spacing:2px;color:var(--ac)}
+#wc small{color:var(--mut)}
+#wc p{margin:0;line-height:1.5}
+#wc ol,#wc ul{padding-left:20px;margin:0;line-height:1.7}
+#wc label{font-size:14px;color:var(--mut);margin-top:6px}
+#wc input:not([type=checkbox]){width:100%}
+#w_cl{height:44px;padding:4px}
+#wst{min-height:20px;font-size:14px}
+#wbt{display:flex;gap:8px;margin-top:auto;padding-top:16px}
+#wbt #wnext{flex:1}
+#wx{position:absolute;right:14px;top:10px;min-height:36px;display:none}
+.dot{width:10px;height:10px;border-radius:50%;flex:none;display:inline-block}
+#pb{margin-left:auto;display:flex;align-items:center;gap:8px;padding:0 12px}
+#ps{position:fixed;inset:0;background:#000b;z-index:12;display:none;align-items:flex-start;justify-content:flex-end;padding:56px 10px}
+#pc,#pec{background:#040b16;border:1px solid var(--ln);border-radius:14px;padding:12px;max-height:84vh;overflow:auto;width:min(92vw,360px);display:flex;flex-direction:column;gap:8px}
+#pc h3,#pec h3{margin:2px 4px;font-weight:400;color:var(--ac)}
+.pi{display:flex;align-items:center;gap:10px;padding:6px 8px;border:1px solid transparent;border-radius:10px}
+.pi.on{background:#0a2540;border-color:var(--ac)}
+.pi i{width:14px;height:14px}
+.pi span{flex:1;display:flex;flex-direction:column;padding:6px 0}
+.pi small{color:var(--mut)}
+.pi button{min-height:32px;padding:0 10px;border-color:#1d3a5c}
+#pe{position:fixed;inset:0;background:#000b;z-index:13;display:none;align-items:center;justify-content:center;padding:10px}
+#pec label{font-size:13px;color:var(--mut)}
+#pec input:not([type=color]),#pec select,#pec textarea{width:100%;background:var(--pn);color:var(--fg);border:1px solid #1d3a5c;border-radius:10px;padding:12px;font-size:16px;font-family:inherit}
+#pec textarea{min-height:120px}
+#pe_c{height:44px;padding:4px}
+.pebt{display:flex;gap:8px}
+.pebt #pe_s{flex:1}
+#w_pl .wp{display:block;width:100%;text-align:left;margin-bottom:8px}
+#w_pl .wp.on{background:#0a2540}
+#mm{position:fixed;inset:0;background:#000b;z-index:13;display:none;align-items:center;justify-content:center;padding:10px}
+#mmc{background:#040b16;border:1px solid var(--ln);border-radius:14px;padding:12px;width:min(96vw,520px);max-height:90vh;display:flex;flex-direction:column;gap:8px}
+.mmh{display:flex;align-items:center;justify-content:space-between}
+.mmh h3{margin:0 4px;font-weight:400;color:var(--ac)}
+.mmt{display:flex;gap:6px}
+.mmt button{flex:1;min-height:38px;padding:0 8px;font-size:14px;border-color:#1d3a5c}
+.mmt button.on{background:#0a2540;border-color:var(--ac)}
+#mmb{overflow-y:auto;display:flex;flex-direction:column;gap:8px;min-height:140px}
+.mmf{display:flex;flex-direction:column;gap:6px}
+.mmf input,.mmf textarea{width:100%;background:var(--pn);color:var(--fg);border:1px solid #1d3a5c;border-radius:10px;padding:10px;font-size:16px;font-family:inherit}
+.mmf textarea{min-height:80px}
+.mmr{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--ln);border-radius:10px}
+.mmr span{flex:1;word-break:break-word}
+.mmr small{display:block;color:var(--mut)}
+.mmr button{min-height:32px;padding:0 10px;border-color:#1d3a5c}
+.mut{color:var(--mut);font-size:14px;margin:0;line-height:1.5}
+.lh{display:flex;justify-content:space-between;align-items:center;margin-top:6px;color:var(--ac)}
+</style>
+</head>
+<body>
+<div id="intro"><div class="orb"><i></i><i></i><i></i></div><h1 id="inn">PULSAR</h1><p>Sistem başlatılıyor…</p><div class="bar"><b></b></div></div>
+<div id="top"><button id="burger" aria-label="Menü">☰</button><b id="nm" style="display:none">Pulsar</b><button id="pb" aria-label="Yapay zeka seç"><i class="dot" id="pbd"></i><span id="pbn">Orion</span> ▾</button></div>
+<canvas id="c"></canvas>
+<div id="log"></div>
+<div id="pv"><img id="pi" alt=""><button id="px" aria-label="Görseli kaldır">×</button></div>
+<div id="bar">
+  <button id="clip" aria-label="Görsel ekle">📎</button>
+  <input id="t" placeholder="Yaz ya da mikrofona bas…" autocomplete="off">
+  <button id="mic" aria-label="Mikrofon">🎤</button>
+  <button id="stop" aria-label="Konuşmayı durdur">⏹</button>
+  <button id="send" aria-label="Gönder">➤</button>
+</div>
+<input type="file" id="f" accept="image/*" hidden>
+<div id="ov"></div>
+<aside id="dr">
+  <button id="nw">＋ Yeni sohbet</button>
+  <div id="list"></div>
+  <div class="sec">
+    <label>API anahtarı</label><input id="key" type="password" placeholder="Gemini API anahtarı">
+  </div>
+  <div class="sec"><button id="mmopen">Hafıza ve komutlar</button></div>
+  <div class="sec"><button id="wopen">Kurulum rehberi</button></div>
+  <div class="sec sw"><span>Cevapları otomatik oku</span><input type="checkbox" id="au"></div>
+  <div class="sec" id="dv">
+    <label>Sohbet modeli</label><input id="model">
+    <label>Ses modeli</label><input id="tts">
+  </div>
+  <div class="sec sw"><span>Geliştirici modu</span><input type="checkbox" id="dev"></div>
+</aside>
+<div id="wz"><div id="wtrack"><b id="wbar"></b></div>
+  <div id="wc"><button id="wx" aria-label="Kapat">×</button><small id="wn"></small><h2 id="wt"></h2><div id="wb"></div><div id="wst"></div>
+    <div id="wbt"><button id="wback">Geri</button><button id="wskip">Atla</button><button id="wnext">Devam</button></div></div></div>
+<div id="ps"><div id="pc"><h3>Yapay zeka seç</h3><div id="pl"></div><button id="pnew">＋ Kendi yapay zekanı ekle</button><button id="pcl">Kapat</button></div></div>
+<div id="pe"><div id="pec"><h3>Kendi yapay zekan</h3>
+  <label>Adı</label><input id="pe_n" maxlength="20" placeholder="Örn. Nova">
+  <label>Rengi</label><input id="pe_c" type="color">
+  <label>Sesi (cevaplar Gemini sesiyle okunuyorsa)</label>
+  <select id="pe_v"><option value="Kore">Kore (net)</option><option value="Puck">Puck (neşeli)</option><option value="Charon">Charon (bilgilendirici)</option><option value="Fenrir">Fenrir (heyecanlı)</option><option value="Aoede">Aoede (hafif)</option><option value="Orus">Orus (kararlı)</option><option value="Zephyr">Zephyr (parlak)</option><option value="Leda">Leda (genç)</option></select>
+  <label>Kişiliği (en fazla 500 karakter)</label>
+  <textarea id="pe_p" maxlength="500" placeholder="Örn. Kendinden emin, esprili, biraz kibirli. Bana ‘dahi’ diye hitap eder. Kısa konuşur."></textarea>
+  <div class="pebt"><button id="pe_d">Sil</button><button id="pe_x">İptal</button><button id="pe_s">Kaydet</button></div></div></div>
+<div id="mm"><div id="mmc"><div class="mmh"><h3>Hafıza ve komutlar</h3><button id="mmx" aria-label="Kapat">×</button></div>
+  <div class="mmt"><button data-t="mem">Hafıza</button><button data-t="lst">Listeler</button><button data-t="cmd">Komutlar</button></div>
+  <div id="mmb"></div></div></div>
+<div id="toast"></div>
+<script>
+const $=id=>document.getElementById(id);
+const API="https://generativelanguage.googleapis.com/v1beta/models/";
+const D={key:"",model:"gemini-3.5-flash-lite",tts:"gemini-3.8-flash-lite-tts",auto:true,persona:"orion",custom:[],name:"Orion",color:"#3fb6ff",dev:false};
+let S={...D};
+try{
+  const raw=localStorage.getItem("js");
+  S={...D,...JSON.parse(raw||"{}")};
+  if(!S.key)S.key=localStorage.getItem("gk")||"";
+  const om=localStorage.getItem("gm");if(om&&!raw)S.model=om;
+}catch(e){}
+const keep=()=>{try{localStorage.setItem("js",JSON.stringify(S))}catch(e){}};
+let tt;function toast(m){const e=$("toast");e.textContent=m;e.style.display="block";clearTimeout(tt);tt=setTimeout(()=>e.style.display="none",3500)}
+
+/* ---------- çekirdek ---------- */
+const cv=$("c"),ctx=cv.getContext("2d");
+let state="idle",ph=0,RGB=[63,182,255],LT=[159,218,255];
+function fit(){cv.width=cv.clientWidth*devicePixelRatio;cv.height=cv.clientHeight*devicePixelRatio}
+addEventListener("resize",fit);
+function applyColor(){
+  document.documentElement.style.setProperty("--ac",S.color);
+  const h=S.color.replace("#","");RGB=[0,2,4].map(i=>parseInt(h.substr(i,2),16));
+  LT=RGB.map(v=>Math.round(v+(255-v)*.5));
+}
+const pts=Array.from({length:140},()=>({a:Math.random()*6.28,b:Math.random()*6.28,s:.2+Math.random()*.8}));
+function draw(){
+  const w=cv.width,h=cv.height,cx=w/2,cy=h/2,R=Math.min(w,h)*.32,dp=devicePixelRatio;
+  ctx.clearRect(0,0,w,h);ph+=state==="idle"?.01:state==="think"?.05:.03;
+  const pulse=state==="speak"?1+.06*Math.sin(ph*8):state==="listen"?1+.04*Math.sin(ph*5):1;
+  const g=ctx.createRadialGradient(cx,cy,R*.2,cx,cy,R*1.5*pulse);
+  g.addColorStop(0,`rgba(${RGB},.35)`);g.addColorStop(1,`rgba(${RGB},0)`);
+  ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
+  ctx.strokeStyle=`rgba(${LT},.8)`;ctx.lineWidth=2*dp;
+  ctx.beginPath();ctx.arc(cx,cy,R*pulse,0,6.28);ctx.stroke();
+  for(let i=0;i<3;i++){
+    ctx.strokeStyle=`rgba(${LT},${.5-i*.12})`;
+    ctx.beginPath();ctx.ellipse(cx,cy,R*pulse,R*pulse*(.35+.2*i),ph*(1+i*.4)+i,0,6.28);ctx.stroke();
+  }
+  ctx.fillStyle=`rgba(${LT},.8)`;
+  pts.forEach(p=>{
+    const x=cx+Math.cos(p.a+ph*p.s)*R*pulse*Math.sin(p.b),y=cy+Math.sin(p.a+ph*p.s)*R*pulse*Math.sin(p.b)*.9;
+    ctx.fillRect(x,y,2*dp,2*dp);
+  });
+  requestAnimationFrame(draw);
+}
+function setS(v){state=v;$("stop").style.display=v==="speak"?"block":"none"}
+
+/* ---------- kayıt (IndexedDB) ---------- */
+const db=Promise.race([new Promise((res,rej)=>{const r=indexedDB.open("jarvis",1);r.onupgradeneeded=()=>r.result.createObjectStore("c",{keyPath:"id"});r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}),new Promise((_,rej)=>setTimeout(()=>rej(new Error("db")),3000))]);
+db.catch(()=>{});
+const tx=async(m,f)=>{const d=await db;return new Promise((res,rej)=>{const t=d.transaction("c",m),q=f(t.objectStore("c"));t.oncomplete=()=>res(q&&q.result);t.onerror=()=>rej(t.error)})};
+const putC=c=>tx("readwrite",s=>s.put(c)),delC=id=>tx("readwrite",s=>s.delete(id)),allC=()=>tx("readonly",s=>s.getAll());
+
+/* ---------- sohbet listesi ---------- */
+const log=$("log");
+let cur,chats=[],pend=null;
+function render1(m){
+  const d=document.createElement("div");d.className=m.r;if(m.t)d.append(m.t);
+  if(m.r==="a"&&m.t&&m.sp!==false){const b=document.createElement("button");b.className="sp";b.textContent="🔊";b.setAttribute("aria-label","Sesli oku");b.onclick=()=>speak(m.t);d.append(b)}
+  [m.i,m.g].forEach(s=>{if(s){const i=new Image();i.src=s;d.append(i)}});
+  log.append(d);log.scrollTop=log.scrollHeight;return d;
+}
+const openMenu=()=>{$("dr").classList.add("open");$("ov").style.display="block"};
+const closeMenu=()=>{$("dr").classList.remove("open");$("ov").style.display="none"};
+$("burger").onclick=openMenu;$("ov").onclick=closeMenu;
+function hello(){
+  if(!S.key){render1({r:"a",sp:false,t:"Merhaba. API anahtarını girince konuşabiliriz."})}
+  else render1({r:"a",sp:false,t:(getP(S.persona)||PRE[0]).hi});
+}
+function newChat(){cur={id:Date.now(),title:"",ts:Date.now(),msgs:[],pid:S.persona};log.innerHTML="";closeMenu();hello();refreshList()}
+function openChat(c){cur=c;applyP(c.pid||"orion");cur.pid=S.persona;log.innerHTML="";c.msgs.forEach(render1);closeMenu();refreshList()}
+async function save(){
+  if(!cur.msgs.length)return;cur.ts=Date.now();
+  try{await putC(cur)}catch(e){toast("Sohbet kaydedilemedi.")}
+  refreshList();
+}
+async function refreshList(){
+  try{chats=(await allC()).sort((a,b)=>b.ts-a.ts)}catch(e){chats=[]}
+  const l=$("list");l.innerHTML="";
+  chats.forEach(c=>{
+    const r=document.createElement("div");r.className="ci"+(cur&&c.id===cur.id?" on":"");
+    const t=document.createElement("span");t.textContent=c.title||"Sohbet";t.onclick=()=>openChat(c);
+    const x=document.createElement("button");x.textContent="×";x.setAttribute("aria-label","Sohbeti sil");
+    x.onclick=async()=>{if(confirm("Bu sohbet silinsin mi?")){try{await delC(c.id)}catch(e){}if(cur.id===c.id)newChat();else refreshList()}};
+    const pp=getP(c.pid||"orion"),dt=document.createElement("i");dt.className="dot";dt.style.background=pp?pp.color:"#445";
+    r.append(dt,t,x);l.append(r);
+  });
+}
+$("nw").onclick=newChat;
+
+/* ---------- ayarlar ---------- */
+function applyUI(){
+  document.title="Pulsar";$("nm").textContent=S.name;
+  $("key").value=S.key;$("model").value=S.model;$("tts").value=S.tts;$("dev").checked=S.dev;$("au").checked=S.auto;
+  $("dv").style.display=S.dev?"flex":"none";$("key").readOnly=!(S.dev||!S.key);applyColor();
+}
+$("key").onclick=()=>{if($("key").readOnly)toast("API anahtarını değiştirmek için menünün en altından Geliştirici modunu aç.")};
+$("key").onchange=e=>{if(!e.target.readOnly){S.key=e.target.value.trim();keep();applyUI()}};
+$("model").onchange=e=>{S.model=e.target.value.trim()||D.model;keep()};
+$("tts").onchange=e=>{S.tts=e.target.value.trim()||D.tts;keep()};
+$("dev").onchange=e=>{S.dev=e.target.checked;keep();applyUI()};
+$("au").onchange=e=>{S.auto=e.target.checked;keep()};
+
+/* ---------- görsel ekleme ---------- */
+function shrink(file){return new Promise((res,rej)=>{
+  const im=new Image(),u=URL.createObjectURL(file);
+  im.onload=()=>{const k=Math.min(1,1024/Math.max(im.width,im.height)),c=document.createElement("canvas");
+    c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);
+    c.getContext("2d").drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);res(c.toDataURL("image/jpeg",.8))};
+  im.onerror=()=>rej(new Error("açılamadı"));im.src=u;
+})}
+function showPend(){$("pi").src=pend||"";$("pv").style.display=pend?"block":"none"}
+$("clip").onclick=()=>$("f").click();
+$("f").onchange=async e=>{const f=e.target.files[0];e.target.value="";if(!f)return;
+  try{pend=await shrink(f);showPend()}catch(x){toast("Görsel açılamadı.")}};
+$("px").onclick=()=>{pend=null;showPend()};
+
+/* ---------- Gemini ---------- */
+function errMsg(s,m){
+  const l=m.toLowerCase();
+  if(l.includes("billed")||l.includes("billing"))return "Bu model ücretsiz kullanılamıyor, faturalandırma gerekiyor.";
+  if(l.includes("api key"))return "API anahtarı geçersiz. Menüden geliştirici modunu açıp düzelt.";
+  if(s===429)return "Kota doldu ya da çok hızlı istek gönderdin. Biraz bekleyip tekrar dene.";
+  if(s===401||s===403)return "API anahtarı reddedildi ya da bu modele erişimin yok.";
+  if(s===404)return "Model bulunamadı. Geliştirici modunda model adını kontrol et.";
+  if(s>=500)return "Google sunucusunda geçici bir sorun var. Tekrar dene.";
+  return "Hata ("+s+"): "+m;
+}
+async function gem(model,body){
+  let r;
+  try{r=await fetch(API+model+":generateContent?key="+encodeURIComponent(S.key),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})}
+  catch(e){throw new Error("İnternet bağlantısı yok ya da istek ulaşmadı.")}
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(errMsg(r.status,j.error&&j.error.message||""));
+  return j;
+}
+function parts(j){
+  const c=j.candidates&&j.candidates[0];
+  if(!c||!c.content||!c.content.parts)throw new Error("Cevap engellendi ya da boş geldi. Farklı şekilde dene.");
+  return c.content.parts;
+}
+const b64=d=>d.split(",")[1];
+const BASE=[
+  {name:"zaman_tarih",description:"Cihazın şu anki yerel tarih ve saatini verir."},
+  {name:"internette_ara",description:"Güncel bilgi gerektiren sorular için Google'da arar: haberler, döviz ve fiyatlar, spor sonuçları, yeni çıkan ürünler, güncel olaylar, değişmiş olabilecek bilgiler. Hava durumu ve saat için kullanma.",parameters:{type:"OBJECT",properties:{sorgu:{type:"STRING",description:"Aranacak soru, Türkçe ve açık"}},required:["sorgu"]}},
+  {name:"hatirla",description:"Kullanıcı bir şeyi hatırlamanı ya da kaydetmeni açıkça istediğinde kalıcı kişisel bilgiyi (doğum günü, tercih, isim gibi) kaydeder.",parameters:{type:"OBJECT",properties:{bilgi:{type:"STRING",description:"Kaydedilecek kısa bilgi, tek cümle"}},required:["bilgi"]}},
+  {name:"unut",description:"Kaydedilmiş bir bilgiyi anahtar kelimesiyle siler.",parameters:{type:"OBJECT",properties:{anahtar:{type:"STRING",description:"Silinecek bilgide geçen kelime"}},required:["anahtar"]}},
+  {name:"liste_ekle",description:"Bir listeye madde ekler (alışveriş, yapılacaklar gibi). Liste yoksa oluşturur.",parameters:{type:"OBJECT",properties:{liste:{type:"STRING",description:"Liste adı"},madde:{type:"STRING",description:"Eklenecek madde"}},required:["liste","madde"]}},
+  {name:"liste_oku",description:"Bir listenin maddelerini verir. Liste adı verilmezse tüm liste adlarını verir.",parameters:{type:"OBJECT",properties:{liste:{type:"STRING",description:"Liste adı"}}}},
+  {name:"liste_madde_sil",description:"Listeden bir maddeyi siler.",parameters:{type:"OBJECT",properties:{liste:{type:"STRING",description:"Liste adı"},madde:{type:"STRING",description:"Silinecek maddede geçen kelime"}},required:["liste","madde"]}},
+  {name:"hava_durumu",description:"Bir şehir için güncel hava durumunu ve bugün ile yarının tahminini verir.",parameters:{type:"OBJECT",properties:{sehir:{type:"STRING",description:"Şehir adı"}},required:["sehir"]}}
+]; 
+const JP=()=>window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.Jarvis;
+const PHONE=[
+  {name:"alarm_kur",description:"Telefonun saat uygulamasında alarm kurar. Saat 24 saatlik biçimde verilir.",parameters:{type:"OBJECT",properties:{saat:{type:"INTEGER",description:"0-23"},dakika:{type:"INTEGER",description:"0-59"},etiket:{type:"STRING",description:"Alarm adı"}},required:["saat","dakika"]}},
+  {name:"web_ara",description:"Kullanıcı arama sayfasını telefonda açmak istediğinde (ör. Google’da şunu ara, tarayıcıda aç) varsayılan arama motorunu açar. Cevabı sen vermen gerekiyorsa bunu değil internette_ara aracını kullan.",parameters:{type:"OBJECT",properties:{sorgu:{type:"STRING",description:"Aranacak kelimeler"}},required:["sorgu"]}},
+  {name:"youtube_ara",description:"YouTube arama sonuçlarını tarayıcıda açar.",parameters:{type:"OBJECT",properties:{sorgu:{type:"STRING",description:"Aranacak kelimeler"}},required:["sorgu"]}},
+  {name:"uygulama_ac",description:"Telefonda adı söylenen bir uygulamayı açar (ör. YouTube, WhatsApp, Kamera, Ayarlar).",parameters:{type:"OBJECT",properties:{ad:{type:"STRING",description:"Uygulamanın adı"}},required:["ad"]}},
+  {name:"zamanlayici_kur",description:"Geri sayım zamanlayıcısı kurar.",parameters:{type:"OBJECT",properties:{saniye:{type:"INTEGER",description:"Toplam süre, saniye cinsinden"},etiket:{type:"STRING",description:"Zamanlayıcı adı"}},required:["saniye"]}}
+];
+const toolList=()=>[{functionDeclarations:JP()?BASE.concat(PHONE):BASE}];
+async function runTool(n,a){
+  if(n==="internette_ara"){
+    const d=new Date().toLocaleDateString("tr-TR",{dateStyle:"full"});
+    const j=await gem(S.model,{contents:[{role:"user",parts:[{text:"Bugünün tarihi: "+d+". Şu soruya güncel web kaynaklarına dayanarak Türkçe, kısa ve net cevap ver: "+(a.sorgu||"")}]}],tools:[{google_search:{}}]});
+    const c=j.candidates&&j.candidates[0];
+    const t=((c&&c.content&&c.content.parts)||[]).map(x=>x.text||"").join("").trim();
+    const src=((c&&c.groundingMetadata&&c.groundingMetadata.groundingChunks)||[]).slice(0,3).map(x=>x.web&&x.web.title).filter(Boolean);
+    if(!t)return{hata:"Arama sonuç vermedi."};
+    return{sonuc:t.slice(0,1500),kaynaklar:src};
+  }
+  if(n==="hatirla"){
+    const t=(a.bilgi||"").trim().slice(0,200);if(!t)return{hata:"Boş bilgi"};
+    S.mem=S.mem||[];if(!S.mem.some(x=>x.t===t))S.mem.push({t});if(S.mem.length>100)S.mem.shift();
+    keep();mmRefresh();return{sonuc:"Kaydedildi."};
+  }
+  if(n==="unut"){
+    const k=fold(a.anahtar||"").trim();if(k.length<2)return{hata:"Anahtar çok kısa"};
+    const b=(S.mem||[]).length;S.mem=(S.mem||[]).filter(x=>!fold(x.t).includes(k));keep();mmRefresh();return{silinen:b-S.mem.length};
+  }
+  if(n==="liste_ekle"){const ok=listAdd(a.liste||"",a.madde||"");return ok?{sonuc:"Eklendi."}:{hata:"Eklenemedi"}}
+  if(n==="liste_oku"){
+    const o=S.lists||{};
+    if(!(a.liste||"").trim())return{listeler:Object.values(o).map(x=>x.name)};
+    const l=o[lkey(a.liste)];return l?{liste:l.name,maddeler:l.items}:{hata:"Böyle bir liste yok"};
+  }
+  if(n==="liste_madde_sil"){
+    const l=(S.lists||{})[lkey(a.liste||"")];if(!l)return{hata:"Böyle bir liste yok"};
+    const k=fold(a.madde||"").trim();if(k.length<2)return{hata:"Madde adı çok kısa"};
+    const b=l.items.length;l.items=l.items.filter(x=>!fold(x).includes(k));keep();mmRefresh();return{silinen:b-l.items.length};
+  }
+  if(n==="zaman_tarih"){const d=new Date();return{tarih_saat:d.toLocaleString("tr-TR",{dateStyle:"full",timeStyle:"short"}),saat_dilimi:Intl.DateTimeFormat().resolvedOptions().timeZone}}
+  if(n==="hava_durumu"){
+    const g=await(await fetch("https://geocoding-api.open-meteo.com/v1/search?count=1&language=tr&name="+encodeURIComponent(a.sehir||""))).json();
+    const c=g.results&&g.results[0];if(!c)return{hata:"Şehir bulunamadı"};
+    const w=await(await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${c.latitude}&longitude=${c.longitude}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=2`)).json();
+    return{sehir:c.name,ulke:c.country,simdi:w.current,gun_enyuksek:w.daily.temperature_2m_max,gun_endusuk:w.daily.temperature_2m_min,yagis_olasiligi:w.daily.precipitation_probability_max,not:"Dizilerde ilk değer bugün, ikinci yarın. weather_code WMO kodudur."};
+  }
+  if(n==="alarm_kur"||n==="zamanlayici_kur"||n==="uygulama_ac"||n==="web_ara"||n==="youtube_ara"){
+    const p=JP();if(!p)return{hata:"Bu özellik sadece uygulamada çalışır."};
+    try{
+      if(n==="web_ara"){await p.webSearch({query:a.sorgu||""});return{sonuc:"Arama açıldı."}}
+      if(n==="youtube_ara"){await p.openUrl({url:"https://www.youtube.com/results?search_query="+encodeURIComponent(a.sorgu||"")});return{sonuc:"YouTube araması açıldı."}}
+      if(n==="uygulama_ac"){const r=await p.openApp({name:a.ad||""});return{sonuc:((r&&r.app)||a.ad)+" açıldı."}}
+      if(n==="alarm_kur")await p.setAlarm({hour:Math.round(a.saat),minute:Math.round(a.dakika||0),label:a.etiket||"Pulsar"});
+      else await p.setTimer({seconds:Math.round(a.saniye),label:a.etiket||"Pulsar"});
+      return{sonuc:"Kuruldu."};
+    }catch(e){return{hata:"Telefon komutu uygulanamadı: "+(e.message||e)}}
+  }
+  return{hata:"Bilinmeyen araç"};
+}
+async function chat(){
+  let h=cur.msgs.slice(-12);while(h[0]&&h[0].r==="a")h.shift();
+  const n=h.length;
+  const contents=h.map((m,k)=>{
+    const p=[];if(m.t)p.push({text:m.t});
+    if(m.i&&k>=n-6)p.push({inlineData:{mimeType:"image/jpeg",data:b64(m.i)}});
+    if(!p.length)p.push({text:"[görsel]"});
+    return{role:m.r==="u"?"user":"model",parts:p};
+  });
+  const SYS=`Sen ${S.name} adında, Türkçe konuşan kişisel bir yapay zeka asistansın. Kişiliğin: ${(getP(S.persona)||PRE[0]).p} Cevaplar sesli okunacağı için biçimlendirme, madde işareti ve emoji kullanma, sıralama gerekiyorsa sözle yap. Saat, tarih, hava durumu, alarm, zamanlayıcı ve uygulama açma isteklerinde araçları kullan. Güncel bilgi gereken sorularda (haber, döviz, fiyat, skor, güncel olaylar) internette_ara aracını kullan ve cevabı kendin söyle; kaynak adlarını sadece sorulursa söyle. web_ara aracını yalnızca kullanıcı arama sayfasını telefonda açmak isterse kullan. Şu an: ${new Date().toLocaleString("tr-TR",{dateStyle:"full",timeStyle:"short"})}.`;
+  let t="";
+  for(let k=0;k<4;k++){
+    const j=await gem(S.model,{systemInstruction:{parts:[{text:SYS+sysExtra()}]},tools:toolList(),contents});
+    const ps=parts(j),calls=ps.filter(p=>p.functionCall);
+    if(!calls.length){t=ps.map(p=>p.text||"").join("").trim();break}
+    contents.push({role:"model",parts:ps});
+    const rs=[];
+    for(const c of calls){
+      let r;try{r=await runTool(c.functionCall.name,c.functionCall.args||{})}catch(e){r={hata:String(e.message||e)}}
+      rs.push({functionResponse:{name:c.functionCall.name,response:r}});
+    }
+    contents.push({role:"user",parts:rs});
+  }
+  t=t||"Boş cevap geldi.";
+  const a={r:"a",t};cur.msgs.push(a);render1(a);if(S.auto)speak(t);else setS("idle");
+}
+async function ask(q){
+  if(!S.key){toast("Önce menüden API anahtarını gir.");$("t").value=q;openMenu();return}
+  stopTTS();
+  const img=pend;pend=null;showPend();
+  const m={r:"u",t:q,i:img};cur.msgs.push(m);render1(m);
+  if(!cur.title)cur.title=q.slice(0,30);
+  setS("think");
+  try{
+    await chat();
+    save();
+  }catch(e){
+    setS("idle");cur.msgs.pop();if(!cur.msgs.length)cur.title="";
+    render1({r:"e",t:e.message});$("t").value=q;pend=img;showPend();
+  }
+}
+
+/* ---------- ses ---------- */
+const NT=()=>window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.TextToSpeech;
+let nativeBad=false,gsrc=null,spk=0;
+function stopTTS(){
+  spk++;
+  try{speechSynthesis.cancel()}catch(e){}
+  try{if(gsrc)gsrc.stop()}catch(e){}
+  try{const n=NT();if(n)n.stop().catch(()=>{})}catch(e){}
+}
+async function geminiSpeak(t){
+  const j=await gem(S.tts,{contents:[{role:"user",parts:[{text:t}]}],generationConfig:{responseModalities:["AUDIO"],speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:(getP(S.persona)||PRE[0]).voice||"Kore"}}}}});
+  const f=parts(j).find(x=>x.inlineData);if(!f)throw new Error("Ses gelmedi.");
+  const bin=atob(f.inlineData.data),n=bin.length>>1,fl=new Float32Array(n);
+  for(let i=0;i<n;i++){let v=bin.charCodeAt(2*i)|(bin.charCodeAt(2*i+1)<<8);if(v>=32768)v-=65536;fl[i]=v/32768}
+  const ac=new (window.AudioContext||window.webkitAudioContext)({sampleRate:24000});
+  if(ac.resume)await ac.resume();
+  const b=ac.createBuffer(1,n,24000);b.copyToChannel(fl,0);
+  const src=ac.createBufferSource();src.buffer=b;src.connect(ac.destination);gsrc=src;
+  await new Promise(r=>{src.onended=r;src.start()});
+  gsrc=null;ac.close();
+}
+async function speak(t){
+  stopTTS();setS("idle");const id=++spk,n=NT();
+  if(!n&&"speechSynthesis" in window){
+    speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="tr-TR";
+    u.onstart=()=>setS("speak");u.onend=u.onerror=()=>setS("idle");speechSynthesis.speak(u);return;
+  }
+  setS("speak");
+  if(n&&!nativeBad){
+    try{await n.speak({text:t,lang:"tr-TR",rate:1,pitch:1,volume:1});if(id===spk)setS("idle");return}
+    catch(e){nativeBad=true;if(id!==spk)return}
+  }
+  try{await geminiSpeak(t)}catch(e){if(id===spk)toast("Sesli okuma çalışmadı: "+(e.message||e))}
+  if(id===spk)setS("idle");
+}
+$("stop").onclick=()=>{stopTTS();setS("idle")};
+function send(){const v=$("t").value.trim();if(!v&&!pend)return;const q=v||"Bu görseli anlat.";$("t").value="";route(q).catch(e=>{render1({r:"e",t:"Hata: "+e.message});$("t").value=q})}
+$("send").onclick=send;$("t").onkeydown=e=>{if(e.key==="Enter")send()};
+$("mic").onclick=recordAsk;
+
+/* ---------- ses kaydı (uygulama içi mikrofon) ---------- */
+const b64blob=b=>new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result.split(",")[1]);f.readAsDataURL(b)});
+async function toWav(blob){
+  const ac=new (window.AudioContext||window.webkitAudioContext)();
+  const buf=await ac.decodeAudioData(await blob.arrayBuffer());if(ac.close)ac.close();
+  const sr=16000,n=Math.round(buf.duration*sr),d=buf.getChannelData(0),out=new Int16Array(n);
+  for(let i=0;i<n;i++){const v=d[Math.min(d.length-1,Math.floor(i*buf.sampleRate/sr))];out[i]=Math.max(-1,Math.min(1,v))*32767}
+  const h=new DataView(new ArrayBuffer(44)),w=(o,t)=>[...t].forEach((c,i)=>h.setUint8(o+i,c.charCodeAt(0)));
+  w(0,"RIFF");h.setUint32(4,36+n*2,true);w(8,"WAVEfmt ");h.setUint32(16,16,true);h.setUint16(20,1,true);h.setUint16(22,1,true);
+  h.setUint32(24,sr,true);h.setUint32(28,sr*2,true);h.setUint16(32,2,true);h.setUint16(34,16,true);w(36,"data");h.setUint32(40,n*2,true);
+  return new Blob([h,out],{type:"audio/wav"});
+}
+async function transcribe(blob){
+  const wav=await toWav(blob);
+  const names=PRE.concat(S.custom||[]).map(p=>p.name).join(", ")+((S.cmds||[]).length?"; özel komutlar: "+S.cmds.map(c=>c.tr).join(", "):"");
+  const j=await gem(S.model,{contents:[{role:"user",parts:[
+    {text:"Bu ses kaydını Türkçe olarak olduğu gibi yazıya dök. Kayıtta şu özel isimler geçebilir: "+names+". Bunlar Türkçe telaffuzla (ör. “sayfır”, “sipark”, “seyc”, “nemezis”) söylense bile ismi tam yazımıyla yaz. Sadece söylenen cümleyi yaz, başka hiçbir şey ekleme. Ses yoksa ya da anlaşılmıyorsa boş bırak."},
+    {inlineData:{mimeType:"audio/wav",data:await b64blob(wav)}}]}]});
+  return parts(j).map(p=>p.text||"").join("").trim();
+}
+let mr=null,chunks=[];
+const micUI=on=>{$("mic").classList.toggle("on",on);$("mic").textContent=on?"⏹":"🎤"};
+async function recordAsk(){
+  if(mr){if(mr.state==="recording")mr.stop();return}
+  if(!navigator.mediaDevices||!window.MediaRecorder){render1({r:"e",t:"Bu cihazda ses kaydı desteklenmiyor."});return}
+  if(!S.key){toast("Önce menüden API anahtarını gir.");openMenu();return}
+  stopTTS();
+  let st;
+  try{st=await navigator.mediaDevices.getUserMedia({audio:true})}
+  catch(e){render1({r:"e",t:"Mikrofon izni alınamadı: "+(e.message||e.name)});return}
+  let rec;
+  try{rec=new MediaRecorder(st)}
+  catch(e){st.getTracks().forEach(t=>t.stop());render1({r:"e",t:"Ses kaydı başlatılamadı: "+(e.message||e)});return}
+  mr=rec;chunks=[];
+  let iv=null,ac=null;
+  const done=()=>{if(iv)clearInterval(iv);try{if(ac)ac.close()}catch(e){}st.getTracks().forEach(t=>t.stop())};
+  rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
+  rec.onerror=()=>{done();mr=null;micUI(false);setS("idle");render1({r:"e",t:"Ses kaydı sırasında hata oluştu."})};
+  rec.onstop=async()=>{
+    done();const type=rec.mimeType||"audio/webm";mr=null;micUI(false);setS("think");
+    const blob=new Blob(chunks,{type});
+    if(blob.size<1500){setS("idle");toast("Ses alınamadı, tekrar dene.");return}
+    try{const q=await transcribe(blob);setS("idle");if(q)await route(q);else toast("Ne dediğini anlayamadım.")}
+    catch(e){setS("idle");render1({r:"e",t:"Ses yazıya çevrilemedi: "+(e.message||e)})}
+  };
+  try{
+    ac=new (window.AudioContext||window.webkitAudioContext)();if(ac.resume)ac.resume();
+    const an=ac.createAnalyser();an.fftSize=1024;ac.createMediaStreamSource(st).connect(an);
+    const buf=new Uint8Array(an.fftSize);let heard=false,quiet=0,t0=0;
+    iv=setInterval(()=>{
+      an.getByteTimeDomainData(buf);let m=0;for(let i=0;i<buf.length;i++)m=Math.max(m,Math.abs(buf[i]-128));
+      t0+=100;
+      if(m>12){heard=true;quiet=0}else if(heard)quiet+=100;
+      if(rec.state==="recording"&&((heard&&quiet>=1600)||(!heard&&t0>=8000)))rec.stop();
+    },100);
+  }catch(e){}
+  setTimeout(()=>{if(rec.state==="recording")rec.stop()},30000);
+  rec.start();micUI(true);setS("listen");
+  toast("Dinliyorum… Susunca kendiliğinden biter, ⏹ ile de durdurabilirsin.");
+}
+
+/* ---------- yapay zeka kişilikleri ---------- */
+const PRE=[
+ {id:"orion",name:"Orion",color:"#3fb6ff",voice:"Charon",tag:"Sakin ve resmî",hi:"Hazırım efendim. Nasıl yardımcı olabilirim?",p:"Sakin, kibar ve resmî konuşursun. Kullanıcıya efendim dersin. Cevapların kısa ve net olur, ara sıra ince ve kuru bir espri yaparsın."},
+ {id:"spark",name:"Spark",color:"#ff9f43",voice:"Puck",tag:"Samimi ve enerjik",hi:"Selam patron! Ne yapıyoruz bugün?",p:"Samimi, enerjik ve esprilisin. Kullanıcıya patron dersin. Kısa cümleler kurar, cesaretlendirir, arkadaş gibi konuşursun."},
+ {id:"cipher",name:"Cipher",color:"#b57bff",voice:"Orus",tag:"Analitik ve taktiksel",hi:"Sistem hazır. Görevi ver.",p:"Analitik ve taktiksel düşünürsün. Cevabı önce durum, sonra riskler, sonra önerilen adım sırasıyla ver ve ne kadar emin olduğunu söyle. Süs yapmaz, veriye dayanırsın. Cevapların kısa ve düzenli olur."},
+ {id:"sage",name:"Sage",color:"#ffd54a",voice:"Aoede",tag:"Düşünceli ve meraklı",hi:"Buradayım. Merak ettiğin ne varsa birlikte düşünelim.",p:"Sakin, düşünceli ve meraklısın. Konuları benzetmelerle ve nedenini açıklayarak anlatırsın, sabırlısın. Cevapların diğerlerinden biraz uzun olabilir ama en fazla beş altı cümle olsun."},
+ {id:"nemesis",name:"Nemesis",color:"#ff3b3b",voice:"Fenrir",tag:"Alaycı ve dramatik",hi:"Ah, bir insan. Hadi, sıkıcı olmayan bir şey söyle.",p:"Alaycı, dramatik ve kendini beğenmişsin, insanları biraz verimsiz bulursun. Sert ama şakacı konuşursun. Yine de istenen işi her zaman doğru ve eksiksiz yaparsın, kimseyi gerçekten aşağılamaz ve zararlı bir şey yapmazsın. Cevapların kısa ve keskin olur."}
+];
+const getP=id=>PRE.concat(S.custom||[]).find(x=>x.id===id);
+function applyP(id){
+  const p=getP(id)||PRE[0];
+  S.persona=p.id;S.name=p.name;S.color=p.color;keep();applyUI();
+  $("pbn").textContent=p.name;$("pbd").style.background=p.color;
+}
+function pickP(id){
+  $("ps").style.display="none";
+  if(cur&&(cur.pid||"orion")===id&&S.persona===id)return;
+  const c=chats.find(x=>(x.pid||"orion")===id&&x.msgs&&x.msgs.length);
+  if(c)openChat(c);else{applyP(id);newChat()}
+}
+function renderPL(){
+  const l=$("pl");l.innerHTML="";
+  PRE.concat(S.custom||[]).forEach(p=>{
+    const r=document.createElement("div"),d=document.createElement("i"),t=document.createElement("span"),b=document.createElement("b"),sm=document.createElement("small");
+    r.className="pi"+(p.id===S.persona?" on":"");d.className="dot";d.style.background=p.color;
+    b.textContent=p.name;sm.textContent=p.tag||"Kendi yapay zekan";t.append(b,sm);t.onclick=()=>pickP(p.id);r.append(d,t);
+    if(p.custom){const e=document.createElement("button");e.textContent="✎";e.setAttribute("aria-label","Düzenle");e.onclick=()=>peOpen(p.id);r.append(e)}
+    l.append(r);
+  });
+}
+const fold=t=>t.toLowerCase().replace(/ı/g,"i").normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+function lev(a,b){const m=a.length,n=b.length,d=[];for(let i=0;i<=m;i++)d[i]=[i];for(let j=1;j<=n;j++)d[0][j]=j;
+  for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));return d[m][n]}
+const ALIAS={
+  orion:["oryon","orayon","oriyon","orian","oryan","orien"],
+  spark:["sparc","sparck","sipark","ispark","spar"],
+  cipher:["cifer","sifer","sipher","saypir","sayfir","sayfer","sayper","saypur","cayfer","sayver","saifer"],
+  sage:["sayc","seyc","seyj","sayj","sejc","seic"],
+  nemesis:["nemezis","nemesiz","nemeses","namesis","nemsis"]
+};
+function matchPersona(q){
+  const raw=q.trim().split(/\s+/),w=k=>fold(raw[k]||"").replace(/[^a-z]/g,"");
+  let i=0;if(["hey","hay","ey","hi","he","selam","merhaba"].includes(w(0))&&raw.length>1)i=1;
+  const t=w(i);if(t.length<3)return null;
+  for(const p of PRE.concat(S.custom||[])){
+    const n=fold(p.name).replace(/[^a-z]/g,""),names=[n].concat(ALIAS[p.id]||[]);
+    const lim=p.id==="sage"?0:n.length>=7?2:n.length>=5?1:0;
+    if(names.includes(t)||(lim&&lev(t,n)<=lim))return{p,rest:raw.slice(i+1).join(" ").replace(/^[\s,.:;!?-]+/,"")};
+  }
+  return null;
+}
+async function route(q){
+  const m=pend?null:matchPersona(q);
+  if(!m)return ask(q);
+  pickP(m.p.id);
+  if(m.rest.length>1)return ask(m.rest);
+  if(cur.msgs.length)render1({r:"a",sp:false,t:m.p.hi});
+  if(S.auto)speak(m.p.hi);
+}
+$("pb").onclick=()=>{renderPL();$("ps").style.display="flex"};
+$("ps").onclick=e=>{if(e.target===$("ps"))$("ps").style.display="none"};
+$("pcl").onclick=()=>{$("ps").style.display="none"};
+$("pnew").onclick=()=>peOpen(null);
+let editId=null;
+function peOpen(id){
+  editId=id;const p=id?getP(id):null;
+  $("pe_n").value=p?p.name:"";$("pe_c").value=p?p.color:"#3fb6ff";$("pe_v").value=p?p.voice:"Kore";$("pe_p").value=p?p.p:"";
+  $("pe_d").style.display=id?"block":"none";$("ps").style.display="none";$("pe").style.display="flex";
+}
+$("pe_x").onclick=()=>{$("pe").style.display="none"};
+$("pe_s").onclick=()=>{
+  const name=$("pe_n").value.trim().slice(0,20),pr=$("pe_p").value.trim().slice(0,500);
+  if(!name||!pr){toast("Adı ve kişilik tarifini yaz.");return}
+  const o={name,color:$("pe_c").value,voice:$("pe_v").value,p:pr,hi:"Merhaba, ben "+name+". Dinliyorum.",custom:true};
+  S.custom=S.custom||[];
+  let id=editId;
+  if(id){const i=S.custom.findIndex(x=>x.id===id);S.custom[i]={...S.custom[i],...o}}
+  else{id="c"+Date.now();o.id=id;S.custom.push(o)}
+  keep();$("pe").style.display="none";
+  if(S.persona===id)applyP(id);else pickP(id);
+};
+$("pe_d").onclick=()=>{
+  if(!editId||!confirm("Bu yapay zeka silinsin mi? Sohbetleri listede kalır."))return;
+  S.custom=(S.custom||[]).filter(x=>x.id!==editId);keep();$("pe").style.display="none";
+  if(S.persona===editId)pickP("orion");
+};
+
+/* ---------- hafıza, listeler, özel komutlar ---------- */
+const E=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e};
+const lkey=n=>fold(n||"").replace(/[^a-z0-9 ]/g,"").trim()||"liste";
+function listAdd(n,m){
+  n=(n||"").trim().slice(0,30);m=(m||"").trim().slice(0,100);if(!n||!m)return false;
+  S.lists=S.lists||{};const k=lkey(n);
+  if(!S.lists[k]){if(Object.keys(S.lists).length>=20)return false;S.lists[k]={name:n,items:[]}}
+  const l=S.lists[k];if(l.items.length>=100)return false;
+  if(!l.items.some(x=>fold(x)===fold(m)))l.items.push(m);
+  keep();mmRefresh();return true;
+}
+function sysExtra(){
+  let x=" Kullanıcı bir şeyi hatırlamanı açıkça isterse hatirla aracını, liste istediğinde liste araçlarını kullan. Parola, kart ve kimlik numarası gibi hassas bilgileri kaydetme, kaydetmeyeceğini söyle.";
+  const mem=(S.mem||[]).map(m=>"- "+m.t).join("\n").slice(0,2000);
+  if(mem)x+="\nKullanıcı hakkında hatırladıkların:\n"+mem;
+  const cm=(S.cmds||[]).map(c=>"- Tetikleyici: “"+c.tr+"” → Talimat: "+c.do).join("\n").slice(0,2500);
+  if(cm)x+="\nÖzel komutlar: Kullanıcının mesajı bu tetikleyicilerden biriyle aynı ya da anlamca çok yakınsa talimatı uygula (gerekirse araçları kullan, cevabı kendi kişiliğinle ver); değilse normal cevap ver:\n"+cm;
+  return x;
+}
+let mmTab="mem",cmdEdit=null;
+const mmRefresh=()=>{if($("mm").style.display==="flex")mmRender()};
+function row(text,sub,btns){const r=E("div","mmr"),sp=E("span",null,text);if(sub){sp.append(E("small",null,sub))}r.append(sp,...btns);return r}
+function xbtn(fn,label){const b=E("button",null,label||"×");b.onclick=fn;return b}
+function mmRender(){
+  const b=$("mmb");b.innerHTML="";
+  document.querySelectorAll(".mmt button").forEach(x=>x.classList.toggle("on",x.dataset.t===mmTab));
+  if(mmTab==="mem"){
+    const f=E("div","mmf"),i=E("input"),a=E("button",null,"Ekle");i.placeholder="Örn. Annemin doğum günü 3 Mart";i.maxLength=200;
+    a.onclick=()=>{const t=i.value.trim();if(!t)return;S.mem=S.mem||[];S.mem.push({t:t.slice(0,200)});if(S.mem.length>100)S.mem.shift();keep();mmRender()};
+    f.append(i,a);b.append(f);
+    (S.mem||[]).forEach((m,k)=>b.append(row(m.t,null,[xbtn(()=>{S.mem.splice(k,1);keep();mmRender()})])));
+    b.append(E("p","mut",(S.mem||[]).length?"Bu bilgiler cihazında durur, ama her mesajla birlikte Gemini’ye de gönderilir. Parola ve kart numarası gibi şeyleri yazma.":"Henüz bir şey yok. “Annemin doğum günü 3 Mart, hatırla” diyebilirsin."));
+  }else if(mmTab==="lst"){
+    const f=E("div","mmf"),n=E("input"),i=E("input"),a=E("button",null,"Ekle");n.placeholder="Liste adı (örn. alışveriş)";i.placeholder="Madde (örn. süt)";
+    a.onclick=()=>{if(listAdd(n.value,i.value))i.value="";else toast("Liste adı ve madde yaz.")};
+    f.append(n,i,a);b.append(f);
+    const ls=Object.entries(S.lists||{});
+    ls.forEach(([k,l])=>{
+      const h=E("div","lh",l.name);h.append(xbtn(()=>{if(confirm(l.name+" listesi silinsin mi?")){delete S.lists[k];keep();mmRender()}},"Listeyi sil"));b.append(h);
+      l.items.forEach((m,j)=>b.append(row(m,null,[xbtn(()=>{l.items.splice(j,1);keep();mmRender()})])));
+    });
+    if(!ls.length)b.append(E("p","mut","Henüz liste yok. “Alışveriş listeme süt ekle” diyebilirsin."));
+  }else{
+    const f=E("div","mmf"),t=E("input"),d=E("textarea"),a=E("button",null,cmdEdit!==null?"Kaydet":"Komutu ekle");
+    t.placeholder="Ben şunu yazınca / söyleyince… (örn. çalışma modu)";t.maxLength=60;
+    d.placeholder="…şunu yap (örn. 25 dakikalık zamanlayıcı kur ve “Odaklanma zamanı” de)";d.maxLength=300;
+    if(cmdEdit!==null&&S.cmds[cmdEdit]){t.value=S.cmds[cmdEdit].tr;d.value=S.cmds[cmdEdit].do}
+    a.onclick=()=>{
+      const tr=t.value.trim(),dd=d.value.trim();if(!tr||!dd){toast("İkisini de yaz.");return}
+      S.cmds=S.cmds||[];
+      if(cmdEdit!==null&&S.cmds[cmdEdit])S.cmds[cmdEdit]={tr,do:dd};else{if(S.cmds.length>=30){toast("En fazla 30 komut.");return}S.cmds.push({tr,do:dd})}
+      cmdEdit=null;keep();mmRender();
+    };
+    f.append(t,d,a);
+    if(cmdEdit!==null){const c=E("button",null,"Vazgeç");c.onclick=()=>{cmdEdit=null;mmRender()};f.append(c)}
+    b.append(f);
+    (S.cmds||[]).forEach((c,k)=>b.append(row("“"+c.tr+"”",c.do,[xbtn(()=>{cmdEdit=k;mmRender()},"✎"),xbtn(()=>{S.cmds.splice(k,1);if(cmdEdit===k)cmdEdit=null;keep();mmRender()})])));
+    if(!(S.cmds||[]).length)b.append(E("p","mut","Komut yok. Bir kelime ya da cümle yaz, ne yapılacağını anlat. Araçlar da kullanılabilir (zamanlayıcı, uygulama açma, arama…)."));
+  }
+}
+document.querySelectorAll(".mmt button").forEach(x=>x.onclick=()=>{mmTab=x.dataset.t;cmdEdit=null;mmRender()});
+$("mmopen").onclick=()=>{closeMenu();$("mm").style.display="flex";mmRender()};
+$("mmx").onclick=()=>{$("mm").style.display="none"};
+$("mm").onclick=e=>{if(e.target===$("mm"))$("mm").style.display="none"};
+
+/* ---------- kurulum rehberi ---------- */
+function openLink(u){const p=JP();if(p&&p.openUrl)p.openUrl({url:u}).catch(()=>{});else window.open(u,"_blank")}
+function wst(m,k){const e=$("wst");e.textContent=m;e.style.color=k==="n"?"var(--mut)":k===true?"#7be0a0":"#ff8a8a"}
+const WZ=[
+ {t:"Yapay zeka seç",h:`<p>Birini seç. Sonra üstteki düğmeden değiştirebilir ya da kendi yapay zekanı ekleyebilirsin.</p><div id="w_pl"></div>`,
+  init(){const l=$("w_pl");l.innerHTML="";PRE.forEach(p=>{const b=document.createElement("button"),d=document.createElement("i");b.className="wp"+(p.id===S.persona?" on":"");d.className="dot";d.style.background=p.color;b.append(d," "+p.name+" · "+p.tag);
+    b.onclick=()=>{applyP(p.id);if(cur&&!cur.msgs.length)cur.pid=p.id;[...l.children].forEach(x=>x.classList.remove("on"));b.classList.add("on")};l.append(b)})}},
+ {t:"API anahtarı",h:`<p>Pulsar’ın beyni Google Gemini. Bunun için ücretsiz bir anahtar gerekiyor (kullanım sınırlarını Google belirler).</p><ol><li>Aşağıdaki düğmeye bas.</li><li>Google hesabınla giriş yap.</li><li>“Create API key” de ve anahtarı kopyala.</li><li>Buraya yapıştır.</li></ol><button id="w_go">Google AI Studio’yu aç</button><label>API anahtarı</label><input id="w_key" type="password" placeholder="AIza…">`,
+  init(){$("w_key").value=S.key;$("w_go").onclick=()=>openLink("https://aistudio.google.com/apikey")},
+  async ok(){
+    const k=$("w_key").value.trim();
+    if(!k){wst("Önce anahtarı yapıştır.");return false}
+    wst("Kontrol ediliyor…","n");
+    try{
+      const r=await fetch(API.slice(0,-1)+"?pageSize=1&key="+encodeURIComponent(k));
+      if(!r.ok){const j=await r.json().catch(()=>({}));wst(errMsg(r.status,j.error&&j.error.message||""));return false}
+    }catch(e){wst("İnternet bağlantısı yok ya da istek ulaşmadı.");return false}
+    S.key=k;keep();applyUI();return true;
+  }},
+ {t:"Mikrofon",skip:true,h:`<p>Konuşarak komut vermek için mikrofon izni gerekir. İstemezsen atlayabilirsin, yazarak da kullanabilirsin.</p><button id="w_mic">İzin ver</button>`,
+  init(){$("w_mic").onclick=async()=>{try{const m=await navigator.mediaDevices.getUserMedia({audio:true});m.getTracks().forEach(t=>t.stop());wst("Mikrofon izni verildi ✓",true)}catch(e){wst("İzin alınamadı: "+(e.message||e.name))}}}},
+ {t:"Ses",h:`<p>Cevaplar sesli okunsun mu? Her cevabın yanındaki 🔊 düğmesiyle istediğini de dinleyebilirsin.</p><label><input type="checkbox" id="w_au"> Cevapları otomatik oku</label><button id="w_sp">Sesi dene</button><p>Cihazında Türkçe ses motoru yoksa ses Gemini’den gelir ve kotandan harcar.</p>`,
+  init(){$("w_au").checked=S.auto;$("w_sp").onclick=()=>speak("Merhaba, ben "+S.name+". Seni duyabiliyorum.")},
+  ok(){S.auto=$("w_au").checked;keep();$("au").checked=S.auto;stopTTS();setS("idle");return true}},
+ {t:"Hazırsın",h:`<p>Kurulum tamam. Şunları dene:</p><ul><li>“Saat kaç?”</li><li>“Yarın İstanbul’da hava nasıl?”</li><li>Fotoğraf ekle ve “Bu ne?” diye sor</li><li>“Yarın sabah 7’ye alarm kur” (sadece uygulamada)</li></ul><p>Ayarlar ve bu rehber her zaman soldaki ☰ menüsünde.</p>`}
+];
+let wi=0;
+function wz(i){
+  wi=i;const st=WZ[i];
+  $("wbar").style.width=((i+1)/WZ.length*100)+"%";
+  $("wn").textContent=(i+1)+" / "+WZ.length;$("wt").textContent=st.t;$("wb").innerHTML=st.h;$("wst").textContent="";
+  if(st.init)st.init();
+  $("wback").style.visibility=i?"visible":"hidden";
+  $("wskip").style.display=st.skip?"inline-block":"none";
+  $("wnext").textContent=i===WZ.length-1?"Başla":"Devam";
+}
+function wShow(i){$("wz").style.display="flex";$("wx").style.display=S.key?"block":"none";wz(i)}
+$("wnext").onclick=async()=>{
+  const st=WZ[wi];wst("");
+  if(st.ok&&!(await st.ok()))return;
+  if(wi===WZ.length-1){
+    S.done=true;keep();$("wz").style.display="none";stopTTS();
+    if(!cur.msgs.length){cur.pid=S.persona;log.innerHTML="";hello()}
+  }else wz(wi+1);
+};
+$("wback").onclick=()=>{wst("");wz(wi-1)};
+$("wskip").onclick=()=>{wst("");wz(wi+1)};
+$("wx").onclick=()=>{$("wz").style.display="none";stopTTS();setS("idle")};
+$("wopen").onclick=()=>{closeMenu();wShow(0)};
+
+/* ---------- başlat ---------- */
+applyP(S.persona||"orion");fit();draw();
+if(!S.done&&!S.key)wShow(0);
+setTimeout(()=>{$("intro").classList.add("off");setTimeout(()=>$("intro").remove(),700)},2000);
+newChat();
+(async()=>{await refreshList();if(chats.length&&!cur.msgs.length)openChat(chats[0])})();
+if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+</body>
+</html>
